@@ -2,7 +2,7 @@
 
 **Design in Creative. Earn it in Survival.**
 
-A Paper 26.2 plugin that builds a small, server-installed blueprint gradually from real materials in a Builder's Chest. This first slice focuses on exact block states and survival accounting; `.litematic` import is supported; a build preview comes later.
+A Paper 26.2 plugin that builds a small, server-installed blueprint gradually from real materials in a Builder's Chest. This first slice focuses on exact block states and survival accounting; `.litematic` import and a Fabric client preview are supported.
 
 ## Build
 
@@ -67,6 +67,26 @@ This mirrors the design's local X axis, then rotates it 90 degrees clockwise whe
 - Normal `/stop` restart recovery, with automatic retries for ordinary pauses.
 - Fail-closed crash recovery: unfinished jobs from an unclean session require inspection and cancellation, never automatic replay.
 - 61 automated tests, plus a real-Paper self-test plugin (`paper-selftest`, development only), covering plan validation, materials, construction, persistence, scheduling, failure behavior, and Builder's Chest ownership.
+
+## Fabric client (preview and place)
+
+The optional client mod for **Minecraft Java 26.2 + Fabric** adds a see-through preview you can move, rotate, and mirror before starting a build. The server stays in charge: the mod only proposes a blueprint, a spot, and an orientation, and the plugin runs the same checks as `/blueprint start`. Players without the mod keep using commands.
+
+Install: Fabric Loader for 26.2, plus `fabric-api-0.161.0+26.2.jar` and `blueprints-client-0.1.0.jar` in the instance's `mods` folder. `run/local-paper/build-and-install.cmd` builds the client too and copies both jars to `run/client-mods/`.
+
+| Key (rebindable) | Action |
+|---|---|
+| `B` | Open Blueprints: choose a blueprint, see needed vs. in-chest materials, opacity, start, your builds, cancel |
+| Arrow keys | Move the preview away / closer / left / right, relative to where you face (hold to repeat) |
+| `Page Up` / `Page Down` | Move up / down |
+| `G` | Move the preview to the block under your crosshair |
+| `R` / `M` | Rotate 90° clockwise (turns in place) / mirror |
+| `Enter` | Start the build here (uses your nearest free Builder's Chest) |
+| `Backspace` | Close the preview |
+
+Preview keys only act while a preview is shown, and the on-screen panel always lists the current bindings. The preview draws each block's real shape (stairs, slabs, doors, walls, fences show their orientation) in its map color; blocks already built correctly disappear, and anything in the way is drawn red. While builds run, the panel shows progress and why a build is paused.
+
+Build the client separately (it needs a newer Gradle than the plugin): `cd fabric-client` then `gradlew build`. The wire protocol is in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
 ## Import a Litematica schematic
 

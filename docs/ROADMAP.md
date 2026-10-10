@@ -10,15 +10,15 @@ Not yet live-tested (covered by unit tests): chunk unloading, owner leaving/mode
 
 Deferred idea: a floating text display above each Builder's Chest showing job progress (needs entity lifecycle handling).
 
-## M1 — Capture and positioning (implemented); preview next
+## M1 — Capture, positioning, and client preview (implemented)
 
-Creative selection capture and tested rotation/mirroring now support player-created builds without hand-editing YAML. Captures retain the same validation and material rules as the demo. Jobs persist transformed plans.
+Creative capture (up to 65 blocks per side), `.litematic` import, ~785 supported block types, and tested rotation/mirroring. The Fabric 26.2 client previews, moves, rotates, and mirrors a blueprint, shows needed vs. in-chest materials, starts and cancels builds, and shows progress and pause reasons. Verified in a real 26.2 client against a real Paper server.
 
-Next, after live Paper acceptance: a Fabric client with blueprint browsing, hologram opacity, simple movement controls, and material/progress displays. Research the current Fabric 26.2 APIs at implementation time.
+Next: true block-model rendering for the preview (currently outline shapes in map colors), a blueprint browser with thumbnails, and uploading `.litematic` files from the client (bounded, validated) instead of the server's import folder.
 
-## M2 — Litematic import and bounded protocol
+## M2 — Client uploads and bounded protocol
 
-Read schematic regions/palettes into the normalized model. Keep format parsing separate from construction. Add a versioned handshake, capability negotiation, bounded uploads, server validation, and owner/region checks. Do not import NBT or entities implicitly.
+Litematic reading exists server-side. Add client upload of schematics with a versioned handshake, capability negotiation, bounded uploads, server validation, and owner/region checks. Do not import NBT or entities implicitly.
 
 ## M3 — Wider survival support
 
