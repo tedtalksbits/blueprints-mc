@@ -26,6 +26,8 @@ public final class Wire {
             out.write(bytes, 0, bytes.length);
             return this;
         }
+        /** VarInt length + raw bytes. */
+        public Writer bytes(byte[] value) { varInt(value.length); out.write(value, 0, value.length); return this; }
         public byte[] bytes() { return out.toByteArray(); }
     }
 
@@ -54,6 +56,13 @@ public final class Wire {
             String s = new String(data, position, length, StandardCharsets.UTF_8);
             position += length;
             return s;
+        }
+        public byte[] bytes(int maxLength) {
+            int length = varInt();
+            if (length < 0 || length > maxLength || position + length > data.length) throw new IllegalArgumentException("Bad byte array length");
+            byte[] out = java.util.Arrays.copyOfRange(data, position, position + length);
+            position += length;
+            return out;
         }
         public void end() { if (position != data.length) throw new IllegalArgumentException("Trailing bytes"); }
     }

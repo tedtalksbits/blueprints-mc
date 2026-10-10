@@ -15,6 +15,9 @@ public class BlueprintsPlugin extends JavaPlugin {
         // Add newly introduced settings to an existing config.yml without touching the operator's values.
         getConfig().options().copyDefaults(true);
         saveConfig();
+        ConstructionPlan.configureLimits(getConfig().getInt("limits.max-blocks", ConstructionPlan.DEFAULT_MAX_BLOCKS),
+            getConfig().getInt("limits.max-span", ConstructionPlan.DEFAULT_MAX_SPAN));
+        getLogger().info("Blueprint limits: " + ConstructionPlan.maxBlocks() + " blocks, " + ConstructionPlan.maxSpan() + " per side.");
         BlueprintRepository blueprints = new BlueprintRepository(this);
         blueprints.load();
         JobRepository jobs = new JobRepository(this);
@@ -30,7 +33,11 @@ public class BlueprintsPlugin extends JavaPlugin {
         BuildStarter starter = new BuildStarter(blueprints, buildManager, radius);
         BlueprintCommand command = new BlueprintCommand(blueprints, buildManager, starter, imports);
         ClientBridge bridge = new ClientBridge(blueprints, buildManager, starter,
-            (player, channel, data) -> player.sendPluginMessage(this, channel, data));
+            (player, channel, data) -> player.sendPluginMessage(this, channel, data), getConfig().getInt("uploads.max-kilobytes", 2048) << 10);
+        getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
+            @org.bukkit.event.EventHandler
+            public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { bridge.forget(event.getPlayer()); }
+        }, this);
         for (String channel : ClientBridge.INCOMING) getServer().getMessenger().registerIncomingPluginChannel(this, channel, bridge);
         for (String channel : ClientBridge.OUTGOING) getServer().getMessenger().registerOutgoingPluginChannel(this, channel);
         PluginCommand registered = getCommand("blueprint");

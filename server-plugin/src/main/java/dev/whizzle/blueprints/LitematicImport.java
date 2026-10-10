@@ -32,6 +32,27 @@ public final class LitematicImport {
         }
     }
 
+    /** Same as {@link #read(Path, String)} for bytes uploaded by the client mod. */
+    public static Result read(byte[] data, String id) throws IOException {
+        if (data.length > MAX_FILE_BYTES) throw new IllegalArgumentException("File is larger than " + (MAX_FILE_BYTES >> 20) + " MB");
+        try (InputStream in = new GZIPInputStream(new ByteArrayInputStream(data))) {
+            return convert(Nbt.readRoot(in), id);
+        }
+    }
+
+    /** One-line summary of what was skipped or adjusted, for chat or the client. */
+    public static String notes(Result result) {
+        StringJoiner out = new StringJoiner(" ");
+        if (result.skippedTotal() > 0) {
+            StringJoiner top = new StringJoiner(", ");
+            result.skipped().entrySet().stream().sorted(Map.Entry.<String, Integer>comparingByValue().reversed()).limit(6)
+                .forEach(e -> top.add(e.getValue() + " " + e.getKey().replace("minecraft:", "")));
+            out.add("Skipped " + result.skippedTotal() + " unsupported: " + top + (result.skipped().size() > 6 ? " (+" + (result.skipped().size() - 6) + " more types)." : "."));
+        }
+        if (result.normalized() > 0) out.add("Adjusted " + result.normalized() + " blocks (water/power off, leaves kept, anchors/composters emptied).");
+        return out.toString();
+    }
+
     @SuppressWarnings("unchecked")
     static Result convert(Map<String, Object> root, String id) {
         Map<String, Object> regions = Nbt.compound(root, "Regions");
@@ -68,14 +89,14 @@ public final class LitematicImport {
                 if (r.air()) continue;
                 if (r.data() == null) { skipped.merge(r.id(), 1, Integer::sum); continue; }
                 if (r.normalized()) normalized++;
-                if (states.size() > ConstructionPlan.MAX_BLOCKS) continue; // keep counting, stop storing
+                if (states.size() > ConstructionPlan.maxBlocks()) continue; // keep counting, stop storing
                 positions.add(new int[]{Math.toIntExact(ox + x), Math.toIntExact(oy + y), Math.toIntExact(oz + z)});
                 states.add(r.data());
             }
         }
         if (states.isEmpty()) throw new IllegalArgumentException("No supported blocks found" + (skipped.isEmpty() ? "" : " (skipped " + skipped.keySet() + ")"));
-        if (states.size() > ConstructionPlan.MAX_BLOCKS)
-            throw new IllegalArgumentException("Schematic has more than " + ConstructionPlan.MAX_BLOCKS + " supported blocks; the current limit is " + ConstructionPlan.MAX_BLOCKS);
+        if (states.size() > ConstructionPlan.maxBlocks())
+            throw new IllegalArgumentException("Schematic has more than " + ConstructionPlan.maxBlocks() + " supported blocks; the current limit is " + ConstructionPlan.maxBlocks());
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
         for (int[] p : positions) {
@@ -83,9 +104,9 @@ public final class LitematicImport {
             maxX = Math.max(maxX, p[0]); maxY = Math.max(maxY, p[1]); maxZ = Math.max(maxZ, p[2]);
         }
         long w = (long) maxX - minX + 1, h = (long) maxY - minY + 1, d = (long) maxZ - minZ + 1;
-        if (w > ConstructionPlan.MAX_SPAN || h > ConstructionPlan.MAX_SPAN || d > ConstructionPlan.MAX_SPAN)
+        if (w > ConstructionPlan.maxSpan() || h > ConstructionPlan.maxSpan() || d > ConstructionPlan.maxSpan())
             throw new IllegalArgumentException("Schematic is " + w + "x" + h + "x" + d + "; the current limit is "
-                + ConstructionPlan.MAX_SPAN + " blocks per side");
+                + ConstructionPlan.maxSpan() + " blocks per side");
         List<BlueprintBlock> blocks = new ArrayList<>(states.size());
         for (int i = 0; i < states.size(); i++) {
             int[] p = positions.get(i);

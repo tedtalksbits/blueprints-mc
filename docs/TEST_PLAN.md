@@ -25,7 +25,8 @@ What this covers: the full loop with the Fabric client. You design in Creative, 
 | 7 | Start another build with too few materials | It pauses; the panel says why ("paused: Missing 3 COBBLESTONE"). Add the items; it continues. |
 | 8 | Preview over an existing block (place dirt where the preview has a block) | That spot is drawn red. |
 | 9 | **B →** your build's **Cancel** | It stops; placed blocks stay; unused items remain in the chest. |
-| 10 | Copy a `.litematic` into `plugins\Blueprints\import\`, run `/blueprint import <file>` | Imported with its file name; anything unsupported is listed. Preview it from the menu. Your tower imports 894 of 895 blocks (only the campfire is skipped). |
+| 10 | Put a `.litematic` in `%APPDATA%\.minecraft\schematics\` (or any subfolder). **B → Upload .litematic...**, pick it, keep or change the name, **Upload** | "Uploaded <name> (N blocks)", plus a list of anything skipped. It appears in the menu; preview and build it. Your tower uploads 894 of 895 blocks (only the campfire is skipped). |
+| 11 | Stop the server, set `limits.max-span: 10` in `plugins\Blueprints\config.yml`, start, try uploading the tower again under a new name | Refused: "Schematic is 12x18x16; the current limit is 10 blocks per side". Set it back to 65 afterwards. |
 
 ## Please report
 
@@ -34,7 +35,7 @@ Screenshots of anything that looks wrong, plus anything that felt clunky: key ch
 ## ⚠️ Known limits and decisions for you
 
 1. **The preview shows each block's shape in its map color, not real textures.** Orientation is clear (stairs, slabs, doors, fences, walls show their shape). Real textured, see-through models are possible and would be the next client step.
-2. **Size limits:** 4,096 blocks and 65 per side, from the existing engine. Raising them is a persistence/performance change, so it is your call.
+2. **Size limits are now in `config.yml`** (`limits.max-blocks`, `limits.max-span`, `uploads.max-kilobytes`), with hard ceilings of 32,768 blocks and 128 per side.
 3. **Capture new...** is shown to anyone with capture permission; in Survival the server refuses with "Capture requires Creative mode".
-4. **.litematic files still go through the server's import folder.** Uploading from the client is on the roadmap.
+4. **Uploads are operator-only by default** (`blueprints.upload`). Grant it to friends with a permissions plugin, or ask me for a config switch.
 5. **The client needs Fabric for Minecraft 26.2.** Players without it keep using `/blueprint` commands.

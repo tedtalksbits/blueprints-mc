@@ -12,8 +12,9 @@ public final class PlanCompiler {
     private PlanCompiler() {}
     private static String key(int x, int y, int z) { return x + "," + y + "," + z; }
     public static ConstructionPlan compile(BlueprintDefinition definition) {
-        if (definition.blocks().isEmpty() || definition.blocks().size() > 4096)
-            throw new IllegalArgumentException("Blueprint must contain 1..4096 blocks");
+        int max = ConstructionPlan.maxBlocks();
+        if (definition.blocks().isEmpty() || definition.blocks().size() > max)
+            throw new IllegalArgumentException("Blueprint must contain 1.." + max + " blocks (limits.max-blocks)");
         Map<String, BlueprintBlock> blocks = new HashMap<>();
         Map<String, BlockData> states = new HashMap<>();
         for (BlueprintBlock spec : definition.blocks()) {

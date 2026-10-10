@@ -9,7 +9,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Message layouts follow docs/PROTOCOL.md; the plugin's ClientBridgeTest checks the same layouts from the other side. */
 class MessagesTest {
 	@Test void parsesEveryClientboundMessage() {
-		assertEquals(new Messages.Welcome(1, true, 16, false), Messages.welcome(new Wire.Writer().varInt(1).bool(true).varInt(16).bool(false).bytes()));
+		assertEquals(new Messages.Welcome(1, true, 16, false, 4096, 65, true, 2097152),
+			Messages.welcome(new Wire.Writer().varInt(1).bool(true).varInt(16).bool(false).varInt(4096).varInt(65).bool(true).varInt(2097152).bytes()));
 		var catalog = Messages.catalog(new Wire.Writer().varInt(1).utf("cabin").utf("Cabin").varInt(12).varInt(5).varInt(3).varInt(4).bytes());
 		assertEquals(new Messages.Entry("cabin", "Cabin", 12, 5, 3, 4), catalog.getFirst());
 		var plan = Messages.plan(new Wire.Writer().utf("cabin").utf("Cabin").varInt(2).utf("minecraft:stone").utf("minecraft:oak_log[axis=x]")
@@ -34,6 +35,12 @@ class MessagesTest {
 		var in = new Wire.Reader(Messages.capture("hut", new int[]{1, -60, 3}, new int[]{-4, -50, 9}));
 		assertEquals("hut", in.utf()); assertEquals(1, in.int32()); assertEquals(-60, in.int32()); assertEquals(3, in.int32());
 		assertEquals(-4, in.int32()); assertEquals(-50, in.int32()); assertEquals(9, in.int32());
+	}
+	@Test void uploadChunksCarryOffsetAndLengthPrefixedBytes() {
+		var in = new Wire.Reader(Messages.uploadChunk(30000, new byte[]{7, 8, 9}));
+		assertEquals(30000, in.varInt()); assertEquals(3, in.varInt());
+		var begin = new Wire.Reader(Messages.uploadBegin("tower", 123456));
+		assertEquals("tower", begin.utf()); assertEquals(123456, begin.varInt());
 	}
 	@Test void startEncodesSignedOriginAndTransform() {
 		var in = new Wire.Reader(Messages.start("cabin", new int[]{-10, 64, 3}, 270, 1));

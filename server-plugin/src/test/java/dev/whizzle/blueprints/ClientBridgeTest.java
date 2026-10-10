@@ -52,7 +52,9 @@ class ClientBridgeTest {
     }
     @Test void helloGetsWelcomeWithPermissionAndRadius() {
         Wire.Reader in = request(ClientBridge.HELLO, new Wire.Writer().varInt(1), ClientBridge.WELCOME);
-        assertEquals(ClientBridge.PROTOCOL, in.varInt()); assertTrue(in.bool()); assertEquals(16, in.varInt()); assertTrue(in.bool()); in.end();
+        assertEquals(ClientBridge.PROTOCOL, in.varInt()); assertTrue(in.bool()); assertEquals(16, in.varInt()); assertTrue(in.bool());
+        assertEquals(ConstructionPlan.maxBlocks(), in.varInt()); assertEquals(ConstructionPlan.maxSpan(), in.varInt());
+        assertTrue(in.bool()); assertEquals(2 << 20, in.varInt()); in.end();
     }
     @Test void catalogListsBlueprintsWithSize() {
         Wire.Reader in = request(ClientBridge.CATALOG_REQUEST, new Wire.Writer(), ClientBridge.CATALOG);
@@ -120,6 +122,52 @@ class ClientBridgeTest {
         assertEquals(2, repository.get("hut").orElseThrow().blockCount());
         Wire.Reader dup = request(ClientBridge.CAPTURE, new Wire.Writer().utf("hut").int32(1).int32(65).int32(1).int32(2).int32(65).int32(1), ClientBridge.RESULT);
         assertFalse(dup.bool(), "no overwrite");
+    }
+    static byte[] gzipLitematic(int stoneCount) throws Exception {
+        var palette = java.util.List.of(LitematicImportTest.state("minecraft:air"), LitematicImportTest.state("minecraft:stone"), LitematicImportTest.state("minecraft:campfire"));
+        int[] values = new int[stoneCount + 1]; java.util.Arrays.fill(values, 1); values[stoneCount] = 2;
+        var root = LitematicImportTest.litematic("Uploaded", java.util.Map.of("r", LitematicImportTest.region(new int[]{0, 0, 0}, new int[]{stoneCount + 1, 1, 1}, palette, values)));
+        var bytes = new java.io.ByteArrayOutputStream();
+        try (var out = new java.io.DataOutputStream(new java.util.zip.GZIPOutputStream(bytes))) { out.writeByte(10); out.writeUTF(""); LitematicImportTest.writeTag(out, root); }
+        return bytes.toByteArray();
+    }
+    void sendChunks(byte[] file, int chunk) {
+        for (int offset = 0; offset < file.length; offset += chunk) {
+            byte[] part = java.util.Arrays.copyOfRange(file, offset, Math.min(file.length, offset + chunk));
+            bridge.onPluginMessageReceived(ClientBridge.UPLOAD_CHUNK, player, new Wire.Writer().varInt(offset).bytes(part).bytes());
+        }
+    }
+    @Test void uploadInChunksImportsAndRefreshesTheCatalog() throws Exception {
+        byte[] file = gzipLitematic(40);
+        Wire.Reader ready = request(ClientBridge.UPLOAD_BEGIN, new Wire.Writer().utf("uploaded").varInt(file.length), ClientBridge.UPLOAD_READY);
+        assertTrue(ready.bool());
+        sendChunks(file, 100);                                       // many small chunks, beyond the request budget
+        Wire.Reader done = request(ClientBridge.UPLOAD_END, new Wire.Writer(), ClientBridge.RESULT);
+        assertTrue(done.bool()); String message = done.utf(10000);
+        assertTrue(message.contains("40 blocks") && message.contains("campfire"), message);
+        assertTrue(sent.stream().anyMatch(x -> x.channel().equals(ClientBridge.CATALOG)));
+        BlueprintRepository fresh = new BlueprintRepository(plugin); fresh.load();
+        assertEquals(40, fresh.get("uploaded").orElseThrow().blockCount());
+    }
+    @Test void uploadRejectsDuplicatesOversizeDisorderAndMissingPermission() throws Exception {
+        byte[] file = gzipLitematic(3);
+        assertFalse(request(ClientBridge.UPLOAD_BEGIN, new Wire.Writer().utf("orientation-demo").varInt(file.length), ClientBridge.UPLOAD_READY).bool(), "duplicate");
+        assertFalse(request(ClientBridge.UPLOAD_BEGIN, new Wire.Writer().utf("big").varInt(100 << 20), ClientBridge.UPLOAD_READY).bool(), "oversize");
+        assertTrue(request(ClientBridge.UPLOAD_BEGIN, new Wire.Writer().utf("jumbled").varInt(file.length), ClientBridge.UPLOAD_READY).bool());
+        sent.clear();
+        bridge.onPluginMessageReceived(ClientBridge.UPLOAD_CHUNK, player, new Wire.Writer().varInt(5).bytes(new byte[]{1, 2}).bytes());
+        assertFalse(new Wire.Reader(sent.getFirst().data()).bool(), "out of order aborts");
+        assertFalse(request(ClientBridge.UPLOAD_END, new Wire.Writer(), ClientBridge.RESULT).bool(), "nothing left to finish");
+        player.setOp(false);
+        assertFalse(request(ClientBridge.UPLOAD_BEGIN, new Wire.Writer().utf("nope").varInt(file.length), ClientBridge.UPLOAD_READY).bool(), "permission");
+    }
+    @Test void corruptUploadIsReportedNotThrown() {
+        byte[] junk = "definitely not gzip".getBytes();
+        assertTrue(request(ClientBridge.UPLOAD_BEGIN, new Wire.Writer().utf("junk").varInt(junk.length), ClientBridge.UPLOAD_READY).bool());
+        sendChunks(junk, 1000);
+        Wire.Reader done = request(ClientBridge.UPLOAD_END, new Wire.Writer(), ClientBridge.RESULT);
+        assertFalse(done.bool()); assertTrue(done.utf(1000).contains("isn't a readable"));
+        assertTrue(repository.get("junk").isEmpty());
     }
     @Test void floodingIsRateLimited() {
         sent.clear();

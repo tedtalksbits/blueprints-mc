@@ -54,14 +54,8 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
                     repository.saveNew(result.plan());
                     ConstructionPlan plan = result.plan();
                     sender.sendMessage("§aImported " + plan.id() + " §7(" + plan.name() + ")§a: " + plan.blockCount() + " blocks.");
-                    if (result.skippedTotal() > 0) {
-                        StringJoiner top = new StringJoiner(", ");
-                        result.skipped().entrySet().stream().sorted(Map.Entry.<String, Integer>comparingByValue().reversed()).limit(6)
-                            .forEach(e -> top.add(e.getValue() + " " + e.getKey().replace("minecraft:", "")));
-                        sender.sendMessage("§6Skipped " + result.skippedTotal() + " unsupported blocks: §f" + top
-                            + (result.skipped().size() > 6 ? " §7(+" + (result.skipped().size() - 6) + " more types)" : ""));
-                    }
-                    if (result.normalized() > 0) sender.sendMessage("§6Adjusted " + result.normalized() + " blocks (water/power off, leaves kept, anchors/composters emptied).");
+                    String notes = LitematicImport.notes(result);
+                    if (!notes.isEmpty()) sender.sendMessage("§6" + notes);
                     sender.sendMessage("§7Use /blueprint materials " + plan.id() + " to see its Survival cost.");
                 } catch (IOException e) { sender.sendMessage("§cCould not read " + fileName + ": " + e.getMessage()); }
                 catch (IllegalArgumentException | IllegalStateException | ArithmeticException e) { sender.sendMessage("§cImport failed: " + e.getMessage()); }

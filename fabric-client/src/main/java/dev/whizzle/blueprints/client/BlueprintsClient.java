@@ -32,11 +32,12 @@ public final class BlueprintsClient implements ClientModInitializer {
 			Messages.PLAN, data -> { Messages.Plan plan = Messages.plan(data); s.plans.put(plan.id(), plan); s.changeCounter++; },
 			Messages.MATERIALS, data -> { s.materials = Messages.materials(data); },
 			Messages.RESULT, this::onResult,
-			Messages.JOBS, data -> { s.jobs = Messages.jobs(data); s.changeCounter++; }));
+			Messages.JOBS, data -> { s.jobs = Messages.jobs(data); s.changeCounter++; },
+			Messages.UPLOAD_READY, data -> { Messages.Result r = Messages.result(data); Uploader.onReady(r.ok(), r.message()); }));
 		Keys.register();
 
 		ClientPlayConnectionEvents.JOIN.register((listener, sender, client) -> { s.reset(); helloSent = false; sendHello(); });
-		ClientPlayConnectionEvents.DISCONNECT.register((listener, client) -> s.reset());
+		ClientPlayConnectionEvents.DISCONNECT.register((listener, client) -> { s.reset(); Uploader.cancel(); });
 		// The server announces its channels after join; greet again once it can hear us.
 		ServerboundPlayChannelEvents.REGISTER.register((listener, sender, client, channels) -> {
 			if (s.connection == ClientState.Connection.UNKNOWN && channels.contains(Identifier.fromNamespaceAndPath("blueprints", Messages.HELLO))) {
@@ -89,6 +90,7 @@ public final class BlueprintsClient implements ClientModInitializer {
 		else drainPreviewKeys();
 
 		if (!s.ready()) return;
+		Uploader.tick();
 		String watched = s.previewing() ? s.previewId : (mc.gui.screen() instanceof BlueprintsScreen ? s.selectedId : null);
 		if (watched != null && tick % MATERIALS_EVERY == 0) Net.send(Messages.MATERIALS_REQUEST, Messages.id(watched));
 		if ((s.hasActiveJobs() || mc.gui.screen() instanceof BlueprintsScreen) && tick % JOBS_EVERY == 0) Net.send(Messages.JOBS_REQUEST, Messages.empty());

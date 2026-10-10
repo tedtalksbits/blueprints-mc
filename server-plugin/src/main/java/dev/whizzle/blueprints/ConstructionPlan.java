@@ -4,16 +4,27 @@ import java.util.*;
 
 /** An immutable, server-validated snapshot. Source file edits cannot change an active job. */
 public record ConstructionPlan(String id, String name, List<ConstructionStep> steps) {
-    public static final int MAX_BLOCKS = 4096, MAX_SPAN = 65;
+    public static final int DEFAULT_MAX_BLOCKS = 4096, DEFAULT_MAX_SPAN = 65, CEILING_BLOCKS = 32768, CEILING_SPAN = 128;
+    private static volatile int maxBlocks = DEFAULT_MAX_BLOCKS, maxSpan = DEFAULT_MAX_SPAN;
+
+    /** Server-wide size limits from config.yml (limits.*), clamped to what the engine is built for. */
+    public static void configureLimits(int blocks, int span) {
+        maxBlocks = Math.clamp(blocks, 1, CEILING_BLOCKS);
+        maxSpan = Math.clamp(span, 1, CEILING_SPAN);
+    }
+    public static int maxBlocks() { return maxBlocks; }
+    /** Longest side in blocks; transformed offsets may range over -(maxSpan-1)..(maxSpan-1). */
+    public static int maxSpan() { return maxSpan; }
     public ConstructionPlan {
         Objects.requireNonNull(id);
         Objects.requireNonNull(name);
         steps = List.copyOf(steps);
-        if (steps.isEmpty() || steps.size() > 4096) throw new IllegalArgumentException("Plan must contain 1..4096 steps");
+        if (steps.isEmpty() || steps.size() > maxBlocks) throw new IllegalArgumentException("Plan must contain 1.." + maxBlocks + " steps");
         Set<String> positions = new HashSet<>();
         for (ConstructionStep step : steps) for (BlueprintBlock block : step.blocks()) {
-            if (Math.abs((long) block.x()) > 64 || Math.abs((long) block.y()) > 64 || Math.abs((long) block.z()) > 64)
-                throw new IllegalArgumentException("Relative coordinates must be within -64..64");
+            int reach = maxSpan - 1;
+            if (Math.abs((long) block.x()) > reach || Math.abs((long) block.y()) > reach || Math.abs((long) block.z()) > reach)
+                throw new IllegalArgumentException("Relative coordinates must be within -" + reach + ".." + reach + " (limits.max-span " + maxSpan + ")");
             if (!positions.add(block.x() + "," + block.y() + "," + block.z()))
                 throw new IllegalArgumentException("Duplicate blueprint coordinate");
         }

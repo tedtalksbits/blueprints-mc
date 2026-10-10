@@ -10,7 +10,7 @@ Encoding matches Minecraft's `FriendlyByteBuf`: **VarInt**, **Int** (4 bytes, bi
 | Channel | Direction | Body |
 |---|---|---|
 | `blueprints:hello` | C→S | VarInt protocol |
-| `blueprints:welcome` | S→C | VarInt protocol, Bool canBuild, VarInt chestSearchRadius, Bool canCapture |
+| `blueprints:welcome` | S→C | VarInt protocol, Bool canBuild, VarInt chestSearchRadius, Bool canCapture, VarInt maxBlocks, VarInt maxSpan, Bool canUpload, VarInt maxUploadBytes |
 | `blueprints:catalog_request` | C→S | (empty) |
 | `blueprints:catalog` | S→C | VarInt n, n × (String id, String name, VarInt blocks, VarInt sizeX, sizeY, sizeZ) |
 | `blueprints:plan_request` | C→S | String id |
@@ -21,6 +21,10 @@ Encoding matches Minecraft's `FriendlyByteBuf`: **VarInt**, **Int** (4 bytes, bi
 | `blueprints:cancel` | C→S | String jobId (full UUID or unique prefix) |
 | `blueprints:result` | S→C | Bool ok, String message |
 | `blueprints:capture` | C→S | String id, Int x1, y1, z1, Int x2, y2, z2 (inclusive corners, any order) |
+| `blueprints:upload_begin` | C→S | String id, VarInt totalBytes |
+| `blueprints:upload_ready` | S→C | Bool ok, String message |
+| `blueprints:upload_chunk` | C→S | VarInt offset, VarInt length, length × byte (at most 30,000 bytes) |
+| `blueprints:upload_end` | C→S | (empty) |
 | `blueprints:jobs_request` | C→S | (empty) |
 | `blueprints:jobs` | S→C | VarInt n, n × (String jobId, String blueprintId, String name, VarInt done, VarInt total, String state, String reason, Int originX, originY, originZ) |
 
@@ -31,6 +35,11 @@ Encoding matches Minecraft's `FriendlyByteBuf`: **VarInt**, **Int** (4 bytes, bi
   clockwise seen from above. The origin stays fixed, so a transformed build can extend into negative offsets. The
   client keeps the visible box in place by sending `origin = desiredMinCorner − minCornerOfTransformedOffsets`.
 - `capture` follows `/blueprint capture` (Creative, `blueprints.capture`, supported blocks, limits); it replies with `result` and pushes `catalog` on success.
+- Uploads: `upload_begin` checks permission (`blueprints.upload`), name, and size, and answers `upload_ready`. Chunks
+  must arrive in order (a gap aborts with a failed `result`); chunks are exempt from the request budget but bounded
+  by the accepted size, and an upload expires after 2 minutes or on disconnect. `upload_end` imports the bytes
+  exactly like `/blueprint import`, replies with `result`, and pushes `catalog`. Clients keep chunks under the
+  game's 32 KB serverbound custom-payload limit.
 - `start` replies with `result`, then pushes `jobs` on success. `cancel` replies with `result` and `jobs`.
 - The server rate-limits each player to 20 requests per second and answers malformed requests with a failed
   `result`.

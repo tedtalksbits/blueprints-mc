@@ -19,3 +19,15 @@ builders-chest:
       P: paper
       I: iron_ingot
       C: chest
+
+limits:
+  # Largest blueprint, in blocks (1-32768), and longest side, in blocks (1-128). Applies to capture, import,
+  # upload, and starting builds; restart the server after changing. Larger plans make jobs.yml bigger and
+  # Creative capture scans more cells, so raise them gradually. Lowering them makes existing larger blueprints
+  # and jobs fail to load (they are kept on disk).
+  max-blocks: 4096
+  max-span: 65
+
+uploads:
+  # Largest .litematic the client mod may upload, in kilobytes (64-8192). Needs blueprints.upload (op by default).
+  max-kilobytes: 2048

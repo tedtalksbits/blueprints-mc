@@ -18,6 +18,9 @@ permissions:
   blueprints.admin:
     description: Inspect/cancel any job and use /blueprint givechest.
     default: op
+  blueprints.upload:
+    description: Upload .litematic files from the Blueprints client mod.
+    default: op
   blueprints.import:
     description: Import .litematic files from plugins/Blueprints/import.
     default: op

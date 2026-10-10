@@ -66,7 +66,7 @@ This mirrors the design's local X axis, then rotates it 90 degrees clockwise whe
 - Main-thread inventory consumption and placement, with atomic job-file replacement.
 - Normal `/stop` restart recovery, with automatic retries for ordinary pauses.
 - Fail-closed crash recovery: unfinished jobs from an unclean session require inspection and cancellation, never automatic replay.
-- 61 automated tests, plus a real-Paper self-test plugin (`paper-selftest`, development only), covering plan validation, materials, construction, persistence, scheduling, failure behavior, and Builder's Chest ownership.
+- 76 plugin tests and 12 client tests, plus a real-Paper self-test plugin (`paper-selftest`, development only), covering plan validation, materials, construction, persistence, scheduling, failure behavior, and Builder's Chest ownership.
 
 ## Fabric client (preview and place)
 
@@ -76,13 +76,15 @@ Install: Fabric Loader for 26.2, plus `fabric-api-0.161.0+26.2.jar` and `bluepri
 
 | Key (rebindable) | Action |
 |---|---|
-| `B` | Open Blueprints: choose a blueprint, see needed vs. in-chest materials, opacity, start, your builds, cancel |
+| `B` | Open Blueprints: choose a blueprint, see needed vs. in-chest materials, opacity, start, your builds, cancel, **Capture new...** (Creative), **Upload .litematic...** |
 | Arrow keys | Move the preview away / closer / left / right, relative to where you face (hold to repeat) |
 | `Page Up` / `Page Down` | Move up / down |
 | `G` | Move the preview to the block under your crosshair |
 | `R` / `M` | Rotate 90° clockwise (turns in place) / mirror |
 | `Enter` | Start the build here (uses your nearest free Builder's Chest) |
 | `Backspace` | Close the preview |
+
+**Upload .litematic...** lists files in your `.minecraft/schematics` folder (where Litematica saves; subfolders included). Pick one, name it, upload; the server imports it with the same rules as `/blueprint import` (needs `blueprints.upload`, op by default; size limit `uploads.max-kilobytes`).
 
 Preview keys only act while a preview is shown, and the on-screen panel always lists the current bindings. The preview draws each block's real shape (stairs, slabs, doors, walls, fences show their orientation) in its map color; blocks already built correctly disappear, and anything in the way is drawn red. While builds run, the panel shows progress and why a build is paused.
 
@@ -96,7 +98,23 @@ Operators (`blueprints.import`) can turn a `.litematic` file into a blueprint:
 2. Run `/blueprint import <file> [id]`. The `.litematic` extension is optional, and tab completion lists the folder. Without an id, one is made from the file name.
 3. Check `/blueprint materials <id>`, then build it like any other blueprint.
 
-Only block states are imported; entities and container contents are ignored. Refused block types (see Supported blocks below) are **skipped and listed** in the import message so you can place them by hand. States are adjusted the same way as Creative capture. All regions of a multi-region schematic are combined, and the origin is the combined minimum corner. Current limits are 4,096 supported blocks and 65 blocks per side; larger schematics are rejected with their size.
+Only block states are imported; entities and container contents are ignored. Refused block types (see Supported blocks below) are **skipped and listed** in the import message so you can place them by hand. States are adjusted the same way as Creative capture. All regions of a multi-region schematic are combined, and the origin is the combined minimum corner. Size limits come from `limits.*` in `config.yml` (default 4,096 blocks, 65 per side); larger schematics are rejected with their size. With the client mod you can also upload from your `.minecraft/schematics` folder (see below).
+
+## Configuration
+
+`plugins/Blueprints/config.yml` (new keys are added automatically on start; restart after editing):
+
+| Key | Default | Meaning |
+|---|---|---|
+| `limits.max-blocks` | 4096 | Largest blueprint in blocks (1-32768) for capture, import, upload, and builds |
+| `limits.max-span` | 65 | Longest side in blocks (1-128) |
+| `uploads.max-kilobytes` | 2048 | Largest `.litematic` the client mod may upload (64-8192) |
+| `construction.max-active-jobs` / `max-active-jobs-per-player` | 16 / 2 | Concurrent unfinished builds |
+| `construction.ticks-between-cycles` / `steps-per-cycle` | 10 / 1 | Build speed |
+| `builders-chest.search-radius` | 16 | How far `/blueprint start` looks for your Builder's Chest |
+| `builders-chest.recipe` | chest + 4 iron + 4 paper | Shaped recipe |
+
+Larger limits make `jobs.yml` larger and Creative capture scans more cells, so raise them gradually. Lowering them leaves larger existing blueprints and jobs on disk but unloaded (the log names them).
 
 ## Builder's Chest
 

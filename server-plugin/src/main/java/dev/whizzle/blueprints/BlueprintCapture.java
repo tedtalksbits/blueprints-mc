@@ -19,7 +19,7 @@ public final class BlueprintCapture {
         int maxX = Math.max(x1, x2), maxY = Math.max(y1, y2), maxZ = Math.max(z1, z2);
         long width = (long) maxX - minX + 1, height = (long) maxY - minY + 1, depth = (long) maxZ - minZ + 1;
         // Check individual spans first, before multiplying, to prevent volume overflow.
-        int span = ConstructionPlan.MAX_SPAN;
+        int span = ConstructionPlan.maxSpan();
         if (width > span || height > span || depth > span)
             throw new IllegalArgumentException("Selection is " + width + "x" + height + "x" + depth + "; each side can be at most " + span + " blocks");
         World world = player.getWorld();
@@ -29,8 +29,9 @@ public final class BlueprintCapture {
         double farX = Math.max(Math.abs(location.getX() - minX), Math.abs(location.getX() - maxX));
         double farY = Math.max(Math.abs(location.getY() - minY), Math.abs(location.getY() - maxY));
         double farZ = Math.max(Math.abs(location.getZ() - minZ), Math.abs(location.getZ() - maxZ));
-        if (farX * farX + farY * farY + farZ * farZ > 128 * 128)
-            throw new IllegalArgumentException("Entire selection must be within 128 blocks of you");
+        int reach = 128 + span;
+        if (farX * farX + farY * farY + farZ * farZ > (double) reach * reach)
+            throw new IllegalArgumentException("Entire selection must be within " + reach + " blocks of you");
         for (int cx = minX >> 4; cx <= (maxX >> 4); cx++) for (int cz = minZ >> 4; cz <= (maxZ >> 4); cz++) {
             if (!world.isChunkLoaded(cx, cz)) throw new IllegalArgumentException("Selection includes an unloaded chunk: " + cx + "," + cz);
         }
@@ -47,7 +48,7 @@ public final class BlueprintCapture {
                 if (firstUnsupported == null) firstUnsupported = block.getX() + " " + block.getY() + " " + block.getZ();
                 continue;
             }
-            if (blocks.size() <= ConstructionPlan.MAX_BLOCKS) blocks.add(new BlueprintBlock(dx, dy, dz, data.getAsString()));
+            if (blocks.size() <= ConstructionPlan.maxBlocks()) blocks.add(new BlueprintBlock(dx, dy, dz, data.getAsString()));
         }
         if (!unsupported.isEmpty()) {
             StringJoiner list = new StringJoiner(", ");
@@ -55,8 +56,8 @@ public final class BlueprintCapture {
             throw new IllegalArgumentException("Blueprints can't build these yet: " + list + " (first at " + firstUnsupported
                 + "). Remove them from the selection and place them by hand after the build.");
         }
-        if (blocks.size() > ConstructionPlan.MAX_BLOCKS)
-            throw new IllegalArgumentException("Selection has more than " + ConstructionPlan.MAX_BLOCKS + " blocks; the current limit is " + ConstructionPlan.MAX_BLOCKS);
+        if (blocks.size() > ConstructionPlan.maxBlocks())
+            throw new IllegalArgumentException("Selection has more than " + ConstructionPlan.maxBlocks() + " blocks; the current limit is " + ConstructionPlan.maxBlocks());
         return PlanCompiler.compile(new BlueprintDefinition(id, id, blocks));
     }
 }

@@ -54,7 +54,8 @@ public final class BuildManager {
             if (y < world.getMinHeight() || y >= world.getMaxHeight()) throw new IllegalStateException("Build exceeds world height");
             Location at = new Location(world, x + 0.5, y, z + 0.5);
             if (!world.getWorldBorder().isInside(at)) throw new IllegalStateException("Build exceeds world border");
-            if (at.distanceSquared(chest.getLocation()) > 128 * 128) throw new IllegalStateException("Entire build must be within 128 blocks of its chest");
+            int chestReach = 128 + ConstructionPlan.maxSpan();
+            if (at.distanceSquared(chest.getLocation()) > (double) chestReach * chestReach) throw new IllegalStateException("Entire build must be within " + chestReach + " blocks of its chest");
             if (x == chest.getX() && y == chest.getY() && z == chest.getZ()) throw new IllegalStateException("Build overlaps its funding chest");
             if (jobs.values().stream().anyMatch(j -> !j.terminal() && j.world().equals(world.getUID()) && occupies(j, x, y, z)))
                 throw new IllegalStateException("Build overlaps another active job");
@@ -133,7 +134,8 @@ public final class BuildManager {
             if (y < world.getMinHeight() || y >= world.getMaxHeight() || !world.getWorldBorder().isInside(at)) {
                 pause(job, BuildJob.State.PAUSED_OBSTRUCTION, "Outside world height/border"); return;
             }
-            if (owner.getLocation().distanceSquared(at) > 128 * 128) { pause(job, BuildJob.State.PAUSED_OWNER, "Owner must remain within 128 blocks of construction"); return; }
+            int ownerReach = 128 + ConstructionPlan.maxSpan();
+            if (owner.getLocation().distanceSquared(at) > (double) ownerReach * ownerReach) { pause(job, BuildJob.State.PAUSED_OWNER, "Owner must remain within " + ownerReach + " blocks of construction"); return; }
             targets.add(world.getBlockAt(x, y, z));
             expected.add(Bukkit.createBlockData(spec.blockData()));
         }

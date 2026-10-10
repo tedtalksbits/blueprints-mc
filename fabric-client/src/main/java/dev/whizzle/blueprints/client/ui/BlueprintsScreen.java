@@ -29,7 +29,7 @@ public final class BlueprintsScreen extends Screen {
 	@Override
 	protected void init() {
 		listButtons.clear();
-		int perPage = Math.max(1, (height - 90) / ROW);
+		int perPage = Math.max(1, (height - 112) / ROW);
 		List<Messages.Entry> catalog = s().catalog;
 		int pages = Math.max(1, (catalog.size() + perPage - 1) / perPage);
 		listPage = Math.min(listPage, pages - 1);
@@ -45,10 +45,13 @@ public final class BlueprintsScreen extends Screen {
 			listButtons.add(b);
 		}
 		if (pages > 1) {
-			addRenderableWidget(Button.builder(Component.literal("<"), b -> { listPage--; rebuildWidgets(); }).pos(10, height - 54).size(30, 20).build()).active = listPage > 0;
-			addRenderableWidget(Button.builder(Component.literal(">"), b -> { listPage++; rebuildWidgets(); }).pos(LIST_WIDTH - 20, height - 54).size(30, 20).build()).active = listPage < pages - 1;
+			addRenderableWidget(Button.builder(Component.literal("<"), b -> { listPage--; rebuildWidgets(); }).pos(10, height - 76).size(30, 20).build()).active = listPage > 0;
+			addRenderableWidget(Button.builder(Component.literal(">"), b -> { listPage++; rebuildWidgets(); }).pos(LIST_WIDTH - 20, height - 76).size(30, 20).build()).active = listPage < pages - 1;
 		}
 
+		if (s().welcome != null && s().welcome.canUpload())
+			addRenderableWidget(Button.builder(Component.literal("Upload .litematic..."), b -> minecraft.gui.setScreen(new UploadScreen(this)))
+				.pos(10, height - 52).size(LIST_WIDTH, 20).build());
 		if (s().welcome != null && s().welcome.canCapture())
 			addRenderableWidget(Button.builder(Component.literal("Capture new..."), b -> { Actions.beginCapture(); onClose(); })
 				.pos(10, height - 28).size(LIST_WIDTH, 20).build());

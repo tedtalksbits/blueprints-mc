@@ -17,6 +17,7 @@ public final class Wire {
 		public Writer int32(int v) { out.write(v >>> 24); out.write(v >>> 16); out.write(v >>> 8); out.write(v); return this; }
 		public Writer bool(boolean v) { out.write(v ? 1 : 0); return this; }
 		public Writer utf(String s) { byte[] b = s.getBytes(StandardCharsets.UTF_8); varInt(b.length); out.write(b, 0, b.length); return this; }
+		public Writer bytes(byte[] b) { varInt(b.length); out.write(b, 0, b.length); return this; }
 		public byte[] bytes() { return out.toByteArray(); }
 	}
 

@@ -10,14 +10,15 @@ public final class Messages {
 	public static final int PROTOCOL = 1;
 	public static final String HELLO = "hello", WELCOME = "welcome", CATALOG_REQUEST = "catalog_request", CATALOG = "catalog",
 		PLAN_REQUEST = "plan_request", PLAN = "plan", MATERIALS_REQUEST = "materials_request", MATERIALS = "materials",
-		START = "start", CANCEL = "cancel", RESULT = "result", JOBS_REQUEST = "jobs_request", JOBS = "jobs", CAPTURE = "capture";
-	public static final List<String> CLIENTBOUND = List.of(WELCOME, CATALOG, PLAN, MATERIALS, RESULT, JOBS);
-	public static final List<String> SERVERBOUND = List.of(HELLO, CATALOG_REQUEST, PLAN_REQUEST, MATERIALS_REQUEST, START, CANCEL, JOBS_REQUEST, CAPTURE);
+		START = "start", CANCEL = "cancel", RESULT = "result", JOBS_REQUEST = "jobs_request", JOBS = "jobs", CAPTURE = "capture",
+		UPLOAD_BEGIN = "upload_begin", UPLOAD_CHUNK = "upload_chunk", UPLOAD_END = "upload_end", UPLOAD_READY = "upload_ready";
+	public static final List<String> CLIENTBOUND = List.of(WELCOME, CATALOG, PLAN, MATERIALS, RESULT, JOBS, UPLOAD_READY);
+	public static final List<String> SERVERBOUND = List.of(HELLO, CATALOG_REQUEST, PLAN_REQUEST, MATERIALS_REQUEST, START, CANCEL, JOBS_REQUEST, CAPTURE, UPLOAD_BEGIN, UPLOAD_CHUNK, UPLOAD_END);
 	private static final int MAX = 1 << 16;
 
 	private Messages() {}
 
-	public record Welcome(int protocol, boolean canBuild, int chestRadius, boolean canCapture) {}
+	public record Welcome(int protocol, boolean canBuild, int chestRadius, boolean canCapture, int maxBlocks, int maxSpan, boolean canUpload, int maxUploadBytes) {}
 	public record Entry(String id, String name, int blocks, int sizeX, int sizeY, int sizeZ) {}
 	public record Plan(String id, String name, List<String> palette, List<Placement.Block> blocks) {}
 	public record Material(String material, int needed, int inChest) {
@@ -31,7 +32,7 @@ public final class Messages {
 		public boolean active() { return !state.equals("COMPLETE") && !state.equals("CANCELLED"); }
 	}
 
-	public static Welcome welcome(byte[] data) { Wire.Reader in = new Wire.Reader(data); return new Welcome(in.varInt(), in.bool(), in.varInt(), in.bool()); }
+	public static Welcome welcome(byte[] data) { Wire.Reader in = new Wire.Reader(data); return new Welcome(in.varInt(), in.bool(), in.varInt(), in.bool(), in.varInt(), in.varInt(), in.bool(), in.varInt()); }
 
 	public static List<Entry> catalog(byte[] data) {
 		Wire.Reader in = new Wire.Reader(data);
@@ -83,6 +84,9 @@ public final class Messages {
 	public static byte[] hello() { return new Wire.Writer().varInt(PROTOCOL).bytes(); }
 	public static byte[] empty() { return new byte[0]; }
 	public static byte[] id(String id) { return new Wire.Writer().utf(id).bytes(); }
+	public static byte[] uploadBegin(String id, int size) { return new Wire.Writer().utf(id).varInt(size).bytes(); }
+	public static byte[] uploadChunk(int offset, byte[] data) { return new Wire.Writer().varInt(offset).bytes(data).bytes(); }
+
 	public static byte[] capture(String id, int[] a, int[] b) {
 		return new Wire.Writer().utf(id).int32(a[0]).int32(a[1]).int32(a[2]).int32(b[0]).int32(b[1]).int32(b[2]).bytes();
 	}

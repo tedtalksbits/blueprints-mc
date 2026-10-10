@@ -17,10 +17,19 @@ public final class ClientBridge implements PluginMessageListener {
         PLAN_REQUEST = "blueprints:plan_request", PLAN = "blueprints:plan",
         MATERIALS_REQUEST = "blueprints:materials_request", MATERIALS = "blueprints:materials",
         START = "blueprints:start", CANCEL = "blueprints:cancel", RESULT = "blueprints:result",
-        JOBS_REQUEST = "blueprints:jobs_request", JOBS = "blueprints:jobs", CAPTURE = "blueprints:capture";
-    public static final List<String> INCOMING = List.of(HELLO, CATALOG_REQUEST, PLAN_REQUEST, MATERIALS_REQUEST, START, CANCEL, JOBS_REQUEST, CAPTURE);
-    public static final List<String> OUTGOING = List.of(WELCOME, CATALOG, PLAN, MATERIALS, RESULT, JOBS);
-    private static final int MAX_ID = 64, REQUESTS_PER_SECOND = 20;
+        JOBS_REQUEST = "blueprints:jobs_request", JOBS = "blueprints:jobs", CAPTURE = "blueprints:capture",
+        UPLOAD_BEGIN = "blueprints:upload_begin", UPLOAD_CHUNK = "blueprints:upload_chunk", UPLOAD_END = "blueprints:upload_end",
+        UPLOAD_READY = "blueprints:upload_ready";
+    public static final List<String> INCOMING = List.of(HELLO, CATALOG_REQUEST, PLAN_REQUEST, MATERIALS_REQUEST, START, CANCEL, JOBS_REQUEST, CAPTURE, UPLOAD_BEGIN, UPLOAD_CHUNK, UPLOAD_END);
+    public static final List<String> OUTGOING = List.of(WELCOME, CATALOG, PLAN, MATERIALS, RESULT, JOBS, UPLOAD_READY);
+    private static final int MAX_ID = 64, REQUESTS_PER_SECOND = 20, MAX_CHUNK = 30000;
+    private static final long UPLOAD_TIMEOUT_MS = 120_000;
+
+    /** An upload in progress: bytes arrive in order, then upload_end imports them. */
+    private static final class Upload {
+        final String id; final byte[] data; int received; final long started = System.currentTimeMillis();
+        Upload(String id, int size) { this.id = id; this.data = new byte[size]; }
+    }
 
     /** Sends a message to one player; tests replace it. */
     public interface Outbox { void send(Player player, String channel, byte[] data); }
@@ -30,17 +39,25 @@ public final class ClientBridge implements PluginMessageListener {
     private final BuildStarter starter;
     private final Outbox outbox;
     private final Map<UUID, long[]> rate = new HashMap<>();
+    private final Map<UUID, Upload> uploads = new HashMap<>();
+    private final int maxUploadBytes;
 
     public ClientBridge(BlueprintRepository repository, BuildManager builds, BuildStarter starter, Outbox outbox) {
+        this(repository, builds, starter, outbox, 2 << 20);
+    }
+
+    public ClientBridge(BlueprintRepository repository, BuildManager builds, BuildStarter starter, Outbox outbox, int maxUploadBytes) {
         this.repository = repository;
         this.builds = builds;
         this.starter = starter;
         this.outbox = outbox;
+        this.maxUploadBytes = Math.clamp(maxUploadBytes, 64 << 10, (int) LitematicImport.MAX_FILE_BYTES);
     }
 
     @Override
     public void onPluginMessageReceived(String channel, Player player, byte[] message) {
-        if (!allow(player)) return;
+        // Upload chunks are bounded by the declared size of an accepted upload instead of the request budget.
+        if (!channel.equals(UPLOAD_CHUNK) && !allow(player)) return;
         try {
             Wire.Reader in = new Wire.Reader(message);
             switch (channel) {
@@ -56,6 +73,9 @@ public final class ClientBridge implements PluginMessageListener {
                 }
                 case CANCEL -> { String job = in.utf(MAX_ID); in.end(); cancel(player, job); }
                 case JOBS_REQUEST -> { in.end(); jobs(player); }
+                case UPLOAD_BEGIN -> { String id = in.utf(MAX_ID); int size = in.varInt(); in.end(); uploadBegin(player, id, size); }
+                case UPLOAD_CHUNK -> uploadChunk(player, in);
+                case UPLOAD_END -> { in.end(); uploadEnd(player); }
                 case CAPTURE -> {
                     String id = in.utf(MAX_ID);
                     int x1 = in.int32(), y1 = in.int32(), z1 = in.int32(), x2 = in.int32(), y2 = in.int32(), z2 = in.int32();
@@ -78,7 +98,9 @@ public final class ClientBridge implements PluginMessageListener {
 
     private void welcome(Player player) {
         outbox.send(player, WELCOME, new Wire.Writer().varInt(PROTOCOL).bool(player.hasPermission("blueprints.build"))
-            .varInt(starter.chestRadius()).bool(player.hasPermission("blueprints.capture")).bytes());
+            .varInt(starter.chestRadius()).bool(player.hasPermission("blueprints.capture"))
+            .varInt(ConstructionPlan.maxBlocks()).varInt(ConstructionPlan.maxSpan())
+            .bool(player.hasPermission("blueprints.upload")).varInt(maxUploadBytes).bytes());
     }
 
     private void catalog(Player player) {
@@ -147,6 +169,53 @@ public final class ClientBridge implements PluginMessageListener {
         }
     }
 
+    private void uploadBegin(Player player, String id, int size) {
+        uploads.remove(player.getUniqueId());
+        String problem = null;
+        if (!player.hasPermission("blueprints.upload")) problem = "You don't have permission to upload blueprints.";
+        else if (size <= 0 || size > maxUploadBytes) problem = "File is " + (size >> 10) + " KB; this server accepts up to " + (maxUploadBytes >> 10) + " KB.";
+        else {
+            try { BlueprintRepository.validateId(id); } catch (IllegalArgumentException e) { problem = e.getMessage(); }
+            if (problem == null && repository.get(id).isPresent()) problem = "A blueprint named " + id + " already exists. Choose another name.";
+        }
+        if (problem == null) uploads.put(player.getUniqueId(), new Upload(id, size));
+        outbox.send(player, UPLOAD_READY, new Wire.Writer().bool(problem == null).utf(problem == null ? "Uploading " + id : problem).bytes());
+    }
+
+    private void uploadChunk(Player player, Wire.Reader in) {
+        Upload upload = uploads.get(player.getUniqueId());
+        if (upload == null) return;                                   // stale chunks after a failure: ignore cheaply
+        if (System.currentTimeMillis() - upload.started > UPLOAD_TIMEOUT_MS) { abort(player, "Upload timed out."); return; }
+        int offset = in.varInt();
+        byte[] bytes = in.bytes(MAX_CHUNK);
+        in.end();
+        if (offset != upload.received || offset + bytes.length > upload.data.length) { abort(player, "Upload data arrived out of order."); return; }
+        System.arraycopy(bytes, 0, upload.data, offset, bytes.length);
+        upload.received += bytes.length;
+    }
+
+    private void uploadEnd(Player player) {
+        Upload upload = uploads.remove(player.getUniqueId());
+        if (upload == null) { result(player, false, "No upload in progress."); return; }
+        if (upload.received != upload.data.length) { result(player, false, "Upload incomplete (" + upload.received + " of " + upload.data.length + " bytes)."); return; }
+        try {
+            LitematicImport.Result imported = LitematicImport.read(upload.data, upload.id);
+            repository.saveNew(imported.plan());
+            String notes = LitematicImport.notes(imported);
+            result(player, true, "Uploaded " + imported.plan().id() + " (" + imported.plan().blockCount() + " blocks)." + (notes.isEmpty() ? "" : " " + notes));
+            catalog(player);
+        } catch (java.io.IOException e) {
+            result(player, false, "That file isn't a readable .litematic (" + e.getMessage() + ").");
+        } catch (IllegalArgumentException | IllegalStateException | ArithmeticException e) {
+            result(player, false, "Upload failed: " + e.getMessage());
+        }
+    }
+
+    private void abort(Player player, String message) {
+        uploads.remove(player.getUniqueId());
+        result(player, false, message);
+    }
+
     private void cancel(Player player, String token) {
         UUID id = builds.jobs().stream().map(BuildJob::id).filter(j -> j.toString().equals(token) || j.toString().startsWith(token))
             .reduce((a, b) -> null).orElse(null);
@@ -181,5 +250,5 @@ public final class ClientBridge implements PluginMessageListener {
         return new int[]{maxX + 1, maxY + 1, maxZ + 1};
     }
 
-    public void forget(Player player) { rate.remove(player.getUniqueId()); }
+    public void forget(Player player) { rate.remove(player.getUniqueId()); uploads.remove(player.getUniqueId()); }
 }

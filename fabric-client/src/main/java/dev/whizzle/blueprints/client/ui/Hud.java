@@ -27,6 +27,8 @@ public final class Hud {
 		if (s.capturing()) captureLines(s, lines);
 		else if (s.previewing()) previewLines(s, lines);
 		else for (Messages.Job job : s.jobs) if (job.active()) lines.add(jobLine(job));
+		if (dev.whizzle.blueprints.client.Uploader.active())
+			lines.add(new Line("Uploading " + dev.whizzle.blueprints.client.Uploader.id() + "... " + dev.whizzle.blueprints.client.Uploader.percent() + "%", GOLD));
 		if (!lines.isEmpty()) panel(g, font, 6, 6, lines);
 		toast(g, font, s);
 	}
@@ -57,7 +59,7 @@ public final class Hud {
 		if (s.corner1 != null) {
 			var look = dev.whizzle.blueprints.client.Actions.lookedAtBlock();
 			if (look != null) out.add(new Line("Selection " + (Math.abs(look.getX() - s.corner1[0]) + 1) + "x" + (Math.abs(look.getY() - s.corner1[1]) + 1)
-				+ "x" + (Math.abs(look.getZ() - s.corner1[2]) + 1) + " (max 65 per side)", GRAY));
+				+ "x" + (Math.abs(look.getZ() - s.corner1[2]) + 1) + " (max " + (s.welcome == null ? 65 : s.welcome.maxSpan()) + " per side)", GRAY));
 		}
 		out.add(new Line(keys(Keys.HIDE) + " cancel", GRAY));
 	}
