@@ -141,5 +141,3 @@ class ConstructionTest {
         assertEquals(Map.of("STONE_BRICKS", 25, "OAK_STAIRS", 4, "OAK_LOG", 3, "OAK_SLAB", 4, "OAK_TRAPDOOR", 1, "OAK_DOOR", 1), demo.materials());
     }
 }
-
-

@@ -1,35 +1,27 @@
 # Roadmap
 
-## M0 — Construction engine (this bundle)
+## M0 — Server construction slice (implemented; live acceptance pending)
 
-Prove exact block-state placement, real material consumption, slow construction, persistence, and pause/resume behavior on Paper 26.2.
+Pinned Paper 26.2/Java 25 build, Gradle wrapper, validated immutable plans, paired doors, correct slab costs, exact-state placement, material list, single-chest funding, global budget, pause/resume, clean restart continuation, crash quarantine, and automated regression tests.
 
-## M1 — Client preview
+Next: complete `TESTING.md` on an isolated Paper 26.2 server and verify Geyser commands. Add claim protection and CoreProtect hooks before granting construction permission broadly. Profile persistence limits and test actual crash/world-save behavior.
 
-Fabric 26.2 client mod with blueprint browser, hologram renderer, opacity, move/rotate/mirror, layer/focus view, and a clean placement panel.
+## M1 — Positioning and preview
 
-## M2 — Litematic import
+Add tested rotation/mirroring for coordinates and block states, then a Fabric client with blueprint browsing, hologram opacity, simple movement controls, and material/progress displays. Research the current Fabric 26.2 APIs at implementation time.
 
-Read gzip-compressed NBT `.litematic` files, resolve region palettes and packed block-state arrays, normalize to relative coordinates + serialized Minecraft block data, and calculate material requirements.
+## M2 — Litematic import and bounded protocol
 
-Do not couple the server to Litematica's file format.
+Read schematic regions/palettes into the normalized model. Keep format parsing separate from construction. Add a versioned handshake, capability negotiation, bounded uploads, server validation, and owner/region checks. Do not import NBT or entities implicitly.
 
-## M3 — Client/server protocol
+## M3 — Wider survival support
 
-Versioned custom payload handshake. Server advertises capabilities and limits. Client uploads blueprint metadata/hash and block payload in bounded chunks. Server validates size, allowed blocks, transform, region and permissions before creating a job.
+Expand the material/state registry with tests for each new family, add support/physics planning, other inventory sources, better history management, and clearer player pause controls. Redstone, fluids, beds, block entities, and moving mechanisms require deliberate semantics before support.
 
-## M4 — Survival UX
+## M4 — Production hardening
 
-Builder's Chest selection, material checklist, missing-material status, estimated duration, start/cancel controls, construction particles/sounds, progress HUD, and pause reasons.
+Protection/audit integrations, persistent inventory/world transaction strategy, shutdown/crash fault injection on real Paper, multi-job performance profiling, large-blueprint storage, and recovery tooling. Keep the server authoritative throughout.
 
-## M5 — Construction planner
+## Non-goals
 
-Replace simple Y-order with structural phases and adjacency-aware ordering so buildings visibly grow foundation → frame/walls → floors → roof → detail. Keep placement rate configurable and bounded.
-
-## M6 — Hardening
-
-Block-to-item registry, multi-block blocks, waterlogging, redstone update policy, block entities, protection hooks, crash/restart tests, chunk unload behavior, malicious payload limits, and large-build profiling.
-
-## Explicit non-goals for early releases
-
-No instant paste button, no Creative inventory spawning, no imported chest contents, no entity cloning, no WorldEdit replacement, and no attempt to reproduce every Litematica feature.
+No instant paste, free Survival materials, imported inventory contents, entity cloning, or broad recreation of Litematica's UI.
