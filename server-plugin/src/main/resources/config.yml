@@ -1,0 +1,15 @@
+construction:
+  # How often the builder wakes up.
+  ticks-between-cycles: 10
+  # Maximum blocks placed per cycle across each active job.
+  blocks-per-cycle: 1
+  # If false, chunks are never force-loaded. A job pauses when its origin/chest chunks unload.
+  keep-chunks-loaded: false
+
+labor-fee:
+  # Optional extra survival cost. 0 means materials-only.
+  emeralds: 0
+
+safety:
+  # V0 refuses to replace non-air blocks unless they already match the blueprint.
+  overwrite-existing-blocks: false

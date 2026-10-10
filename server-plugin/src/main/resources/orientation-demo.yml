@@ -1,0 +1,18 @@
+id: orientation-demo
+name: Orientation Demo
+# A tiny platform with stairs facing four directions. The point is to prove the server
+# can place exact block states instead of relying on player click orientation.
+blocks:
+  - {x: 0, y: 0, z: 0, block-data: "minecraft:stone_bricks"}
+  - {x: 1, y: 0, z: 0, block-data: "minecraft:stone_bricks"}
+  - {x: 2, y: 0, z: 0, block-data: "minecraft:stone_bricks"}
+  - {x: 0, y: 0, z: 1, block-data: "minecraft:stone_bricks"}
+  - {x: 1, y: 0, z: 1, block-data: "minecraft:stone_bricks"}
+  - {x: 2, y: 0, z: 1, block-data: "minecraft:stone_bricks"}
+  - {x: 0, y: 0, z: 2, block-data: "minecraft:stone_bricks"}
+  - {x: 1, y: 0, z: 2, block-data: "minecraft:stone_bricks"}
+  - {x: 2, y: 0, z: 2, block-data: "minecraft:stone_bricks"}
+  - {x: 1, y: 1, z: -1, block-data: "minecraft:oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]"}
+  - {x: 3, y: 1, z: 1, block-data: "minecraft:oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]"}
+  - {x: 1, y: 1, z: 3, block-data: "minecraft:oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]"}
+  - {x: -1, y: 1, z: 1, block-data: "minecraft:oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]"}

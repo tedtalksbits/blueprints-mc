@@ -1,0 +1,16 @@
+name: Blueprints
+version: ${version}
+main: dev.whizzle.blueprints.BlueprintsPlugin
+api-version: '1.21'
+authors: [Tedane, OpenAI]
+description: Survival-funded, time-based schematic construction for Paper.
+commands:
+  blueprint:
+    description: Manage blueprint construction jobs.
+    usage: /blueprint <list|start|status|cancel>
+    permission: blueprints.use
+permissions:
+  blueprints.use:
+    default: true
+  blueprints.admin:
+    default: op
