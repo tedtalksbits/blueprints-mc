@@ -89,11 +89,16 @@ public final class BuildManager {
         if (active.isEmpty()) return;
         try {
             // One attempt per job per round, bounded globally; paused jobs cannot starve later jobs.
+            boolean stateChanged = false;
             for (int i = 0; i < Math.min(budget, active.size()); i++) {
                 BuildJob job = active.get(Math.floorMod(rotation++, active.size()));
+                BuildJob.State before = job.state();
                 placeNext(job);
+                stateChanged |= job.state() != before;
             }
-            if (++saveCounter >= 20) { saveCounter = 0; save(); }
+            // Checkpoint immediately on completion/pause/resume; otherwise every 20 cycles.
+            // Without this, a job finishing after the last periodic save stays BUILDING on disk until shutdown.
+            if (stateChanged || ++saveCounter >= 20) { saveCounter = 0; save(); }
         } catch (Exception e) {
             failed = true;
             for (BuildJob job : jobs.values()) if (!job.terminal()) job.state(BuildJob.State.RECOVERY_REQUIRED, "Placement/storage error; inspect log and cancel after audit");

@@ -52,6 +52,20 @@ class ConstructionTest {
         put(Material.STONE, 1); manager.tick(); assertEquals(BuildJob.State.COMPLETE, restored.state());
         assertTrue(chest.getBlockInventory().isEmpty()); assertEquals(Material.STONE, world.getBlockAt(3, 65, 2).getType());
     }
+    @Test void stateTransitionsAreCheckpointedImmediately() {
+        BuildJob job = start(plan(stone(0), stone(1)));
+        manager.tick();
+        assertEquals("PAUSED_MATERIALS", persisted(job).getString("state"));
+        put(Material.STONE, 2); manager.tick();
+        assertEquals("BUILDING", persisted(job).getString("state")); assertEquals(1, persisted(job).getInt("next-step"));
+        manager.tick();
+        assertEquals("COMPLETE", persisted(job).getString("state")); assertEquals(2, persisted(job).getInt("next-step"));
+    }
+    // Raw file read: JobRepository.load() would (correctly) quarantine jobs from a still-running session.
+    org.bukkit.configuration.ConfigurationSection persisted(BuildJob job) {
+        return org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(directory.resolve("jobs.yml").toFile())
+            .getConfigurationSection("jobs." + job.id());
+    }
     @Test void exactExistingStateIsFreeButDifferentOrientationObstructs() {
         String stairs = "minecraft:oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]";
         world.getBlockAt(2, 65, 2).setBlockData(Bukkit.createBlockData(stairs));
