@@ -1,10 +1,14 @@
 # Roadmap
 
-## M0 — Server construction slice (implemented; live acceptance pending)
+## M0 — Server construction slice (implemented; core live acceptance passed 2026-10-10)
 
-Pinned Paper 26.2/Java 25 build, Gradle wrapper, validated immutable plans, paired doors, correct slab costs, exact-state placement, material list, single-chest funding, global budget, pause/resume, clean restart continuation, crash quarantine, and automated regression tests.
+Pinned Paper 26.2/Java 25 build, Gradle wrapper, validated immutable plans, paired doors, correct slab costs, exact-state placement, material list, owner-bound Builder's Chest funding (one chest per job, 2 active jobs per player), global budget, pause/resume, immediate checkpoints on state changes, clean restart continuation, crash quarantine, and automated regression tests.
 
-Next: complete `TESTING.md` on an isolated Paper 26.2 server and verify Geyser commands. Add claim protection and CoreProtect hooks before granting construction permission broadly. Profile persistence limits and test actual crash/world-save behavior.
+Passed live on Paper 26.2: empty/partial funding, all 38 demo states, clean restart with source edits, obstruction and free matching steps, Creative capture with a `90 x` transform, Builder's Chest crafting/binding/merge refusal/break return.
+
+Not yet live-tested (covered by unit tests): chunk unloading, owner leaving/mode change, permission revocation, cancel, forced process kill. Next: verify Geyser commands. Add claim protection and CoreProtect hooks before granting construction permission broadly. Profile persistence limits.
+
+Deferred idea: a floating text display above each Builder's Chest showing job progress (needs entity lifecycle handling).
 
 ## M1 — Capture and positioning (implemented); preview next
 
