@@ -48,6 +48,23 @@ class BlueprintCaptureTest {
         assertThrows(IllegalArgumentException.class, () -> capture("partial", 1, 65, 1, 1, 65, 1));
         assertTrue(repository.get("partial").isEmpty());
     }
+    @Test void captureListsEveryUnsupportedTypeAndNormalizesWater() {
+        world.getBlockAt(1, 65, 1).setType(Material.CHEST);
+        world.getBlockAt(2, 65, 1).setType(Material.CHEST);
+        world.getBlockAt(3, 65, 1).setType(Material.FURNACE);
+        var e = assertThrows(IllegalArgumentException.class, () -> capture("mixed", 1, 65, 1, 3, 65, 1));
+        assertTrue(e.getMessage().contains("2 chest") && e.getMessage().contains("1 furnace") && e.getMessage().contains("first at 1 65 1"), e.getMessage());
+        for (int x = 1; x <= 3; x++) world.getBlockAt(x, 65, 1).setType(Material.AIR);
+        world.getBlockAt(1, 65, 1).setBlockData(Bukkit.createBlockData("minecraft:oak_stairs[waterlogged=true]"));
+        var plan = capture("wet", 1, 65, 1, 1, 65, 1);
+        assertTrue(plan.steps().getFirst().blocks().getFirst().blockData().contains("waterlogged=false"));
+    }
+    @Test void largeSparseSelectionsAreAllowed() {
+        world.getBlockAt(0, 65, 0).setType(Material.STONE);
+        world.getBlockAt(40, 70, 40).setType(Material.STONE);
+        world.loadChunk(1, 1); world.loadChunk(2, 2); world.loadChunk(0, 1); world.loadChunk(1, 0); world.loadChunk(0, 2); world.loadChunk(2, 0); world.loadChunk(1, 2); world.loadChunk(2, 1);
+        assertEquals(2, capture("sparse", 0, 65, 0, 40, 70, 40).blockCount()); // 41x6x41 cells, far over the old 4096-cell cap
+    }
     @Test void unauthorizedRemoteOversizedAndUnsafeIdsAreRejected() {
         world.getBlockAt(1, 65, 1).setType(Material.STONE);
         player.setGameMode(GameMode.SURVIVAL); assertThrows(IllegalArgumentException.class, () -> capture("build", 1, 65, 1, 1, 65, 1));

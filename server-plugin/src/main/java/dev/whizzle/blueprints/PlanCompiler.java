@@ -3,7 +3,8 @@ package dev.whizzle.blueprints;
 import org.bukkit.Bukkit;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Bisected;
-import org.bukkit.block.data.type.Door;
+import org.bukkit.block.data.type.Stairs;
+import org.bukkit.block.data.type.TrapDoor;
 import java.util.*;
 
 /** Minecraft-version-specific normalization lives here, outside the persisted model. */
@@ -32,18 +33,19 @@ public final class PlanCompiler {
             if (!handled.add(key)) continue;
             BlockData data = states.get(key);
             List<BlueprintBlock> group = List.of(spec);
-            if (data instanceof Door door) {
-                if (door.getHalf() != Bisected.Half.BOTTOM) throw new IllegalArgumentException("Orphan upper door at " + key);
+            // Doors and tall plants: one item places both halves. (Stair/trapdoor "half" means top/bottom position instead.)
+            if (data instanceof Bisected bisected && !(data instanceof Stairs) && !(data instanceof TrapDoor)) {
+                if (bisected.getHalf() != Bisected.Half.BOTTOM) throw new IllegalArgumentException("Upper half without its lower half at " + key);
                 String upperKey = key(spec.x(), Math.addExact(spec.y(), 1), spec.z());
                 BlockData upper = states.get(upperKey);
-                Door expectedUpper = (Door) door.clone();
+                Bisected expectedUpper = (Bisected) bisected.clone();
                 expectedUpper.setHalf(Bisected.Half.TOP);
                 if (upper == null || !upper.getAsString().equals(expectedUpper.getAsString()))
-                    throw new IllegalArgumentException("Door requires matching upper half at " + upperKey);
+                    throw new IllegalArgumentException(data.getMaterial().name().toLowerCase() + " needs its matching upper half at " + upperKey);
                 handled.add(upperKey);
                 group = List.of(spec, blocks.get(upperKey));
             }
-            steps.add(new ConstructionStep(group, data.getMaterial().name(), MaterialCost.amount(data)));
+            steps.add(new ConstructionStep(group, MaterialCost.item(data).name(), MaterialCost.amount(data)));
         }
         return new ConstructionPlan(definition.id(), definition.name(), steps);
     }

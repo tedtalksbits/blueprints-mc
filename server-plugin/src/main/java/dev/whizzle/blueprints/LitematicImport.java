@@ -2,8 +2,6 @@ package dev.whizzle.blueprints;
 
 import org.bukkit.Bukkit;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.block.data.Powerable;
-import org.bukkit.block.data.Waterlogged;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -109,15 +107,12 @@ public final class LitematicImport {
             properties.forEach((k, v) -> joined.add(k + "=" + v));
             text.append(joined);
         }
-        BlockData data;
-        try { data = Bukkit.createBlockData(text.toString()); }
+        BlockData original;
+        try { original = Bukkit.createBlockData(text.toString()); }
         catch (IllegalArgumentException e) { return new Resolved(id, null, false, false); }
-        boolean changed = false;
-        if (data instanceof Waterlogged w && w.isWaterlogged()) { w.setWaterlogged(false); changed = true; }
-        if (data instanceof Powerable p && p.isPowered()) { p.setPowered(false); changed = true; }
-        try { MaterialCost.amount(data); }
-        catch (IllegalArgumentException e) { return new Resolved(id, null, false, false); }
-        return new Resolved(id, data.getAsString(), false, changed);
+        BlockData data = MaterialCost.normalize(original);
+        if (MaterialCost.unsupportedReason(data) != null) return new Resolved(id, null, false, false);
+        return new Resolved(id, data.getAsString(), false, !data.equals(original));
     }
 
     /** Litematica packs entries tightly; an entry may span two longs. */

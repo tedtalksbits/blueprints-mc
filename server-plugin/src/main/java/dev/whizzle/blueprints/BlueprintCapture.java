@@ -4,10 +4,10 @@ import org.bukkit.GameMode;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
-import java.util.ArrayList;
-import java.util.List;
+import org.bukkit.block.data.BlockData;
+import java.util.*;
 
-/** Small Creative selections only. Reads loaded chunks, never copies inventories or entities. */
+/** Creative selections up to 65 blocks per side. Reads loaded chunks, never copies inventories or entities. */
 public final class BlueprintCapture {
     private BlueprintCapture() {}
 
@@ -19,8 +19,9 @@ public final class BlueprintCapture {
         int maxX = Math.max(x1, x2), maxY = Math.max(y1, y2), maxZ = Math.max(z1, z2);
         long width = (long) maxX - minX + 1, height = (long) maxY - minY + 1, depth = (long) maxZ - minZ + 1;
         // Check individual spans first, before multiplying, to prevent volume overflow.
-        if (width > 65 || height > 65 || depth > 65 || width * height * depth > 4096)
-            throw new IllegalArgumentException("Selection must be at most 4096 cells, with no side longer than 65 blocks");
+        int span = ConstructionPlan.MAX_SPAN;
+        if (width > span || height > span || depth > span)
+            throw new IllegalArgumentException("Selection is " + width + "x" + height + "x" + depth + "; each side can be at most " + span + " blocks");
         World world = player.getWorld();
         if (minY < world.getMinHeight() || maxY >= world.getMaxHeight())
             throw new IllegalArgumentException("Selection exceeds world height");
@@ -34,14 +35,28 @@ public final class BlueprintCapture {
             if (!world.isChunkLoaded(cx, cz)) throw new IllegalArgumentException("Selection includes an unloaded chunk: " + cx + "," + cz);
         }
         List<BlueprintBlock> blocks = new ArrayList<>();
+        Map<String, Integer> unsupported = new TreeMap<>();
+        String firstUnsupported = null;
         for (int dy = 0; dy < height; dy++) for (int dx = 0; dx < width; dx++) for (int dz = 0; dz < depth; dz++) {
             Block block = world.getBlockAt(minX + dx, minY + dy, minZ + dz);
             if (!world.getWorldBorder().isInside(block.getLocation())) throw new IllegalArgumentException("Selection exceeds world border");
             if (block.getType().isAir()) continue;
-            try { MaterialCost.amount(block.getBlockData()); }
-            catch (IllegalArgumentException e) { throw new IllegalArgumentException(e.getMessage() + " at " + block.getX() + "," + block.getY() + "," + block.getZ()); }
-            blocks.add(new BlueprintBlock(dx, dy, dz, block.getBlockData().getAsString()));
+            BlockData data = MaterialCost.normalize(block.getBlockData());
+            if (MaterialCost.unsupportedReason(data) != null) {
+                unsupported.merge(block.getType().name().toLowerCase(Locale.ROOT), 1, Integer::sum);
+                if (firstUnsupported == null) firstUnsupported = block.getX() + " " + block.getY() + " " + block.getZ();
+                continue;
+            }
+            if (blocks.size() <= ConstructionPlan.MAX_BLOCKS) blocks.add(new BlueprintBlock(dx, dy, dz, data.getAsString()));
         }
+        if (!unsupported.isEmpty()) {
+            StringJoiner list = new StringJoiner(", ");
+            unsupported.forEach((name, count) -> list.add(count + " " + name));
+            throw new IllegalArgumentException("Blueprints can't build these yet: " + list + " (first at " + firstUnsupported
+                + "). Remove them from the selection and place them by hand after the build.");
+        }
+        if (blocks.size() > ConstructionPlan.MAX_BLOCKS)
+            throw new IllegalArgumentException("Selection has more than " + ConstructionPlan.MAX_BLOCKS + " blocks; the current limit is " + ConstructionPlan.MAX_BLOCKS);
         return PlanCompiler.compile(new BlueprintDefinition(id, id, blocks));
     }
 }

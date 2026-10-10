@@ -63,7 +63,7 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
                         sender.sendMessage("§6Skipped " + result.skippedTotal() + " unsupported blocks: §f" + top
                             + (result.skipped().size() > 6 ? " §7(+" + (result.skipped().size() - 6) + " more types)" : ""));
                     }
-                    if (result.normalized() > 0) sender.sendMessage("§6Switched off waterlogged/powered on " + result.normalized() + " blocks.");
+                    if (result.normalized() > 0) sender.sendMessage("§6Adjusted " + result.normalized() + " blocks (water/power off, leaves kept, anchors/composters emptied).");
                     sender.sendMessage("§7Use /blueprint materials " + plan.id() + " to see its Survival cost.");
                 } catch (IOException e) { sender.sendMessage("§cCould not read " + fileName + ": " + e.getMessage()); }
                 catch (IllegalArgumentException | IllegalStateException | ArithmeticException e) { sender.sendMessage("§cImport failed: " + e.getMessage()); }

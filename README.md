@@ -41,7 +41,7 @@ Operators have `blueprints.capture` by default. In Creative, stand near the buil
 /blueprint materials cabin
 ```
 
-Replace those sample coordinates with your build's coordinates. Either corner order works. The selection is at most 4,096 cells, each side at most 65 blocks, entirely loaded and within 128 blocks of you. Air is skipped. Unsupported blocks (including containers), empty selections, and selections cutting a door in half are rejected. Capture only reads the design; it does not remove blocks or copy inventories/entities.
+Replace those sample coordinates with your build's coordinates. Either corner order works. The selection can be up to 65 blocks per side with up to 4,096 non-air blocks, entirely loaded and within 128 blocks of you. Air is skipped. If the selection contains blocks Blueprints can't build, capture lists every such type with its count and the first position, so you can remove them and place them by hand later. Selections cutting a door or tall plant in half are rejected. Capture only reads the design; it does not remove blocks or copy inventories/entities.
 
 The origin is the selection's **minimum X, Y, Z corner**, including any selected air margin. The blueprint is immediately available and saved as `plugins/Blueprints/blueprints/blueprint-cabin.yml`. IDs use lowercase letters, digits, underscores, and hyphens, up to 64 characters. Existing IDs/files cannot be overwritten. To transfer to another server, copy that YAML into its Blueprints `blueprints/` directory while the destination server is stopped, then start it.
 
@@ -66,7 +66,7 @@ This mirrors the design's local X axis, then rotates it 90 degrees clockwise whe
 - Main-thread inventory consumption and placement, with atomic job-file replacement.
 - Normal `/stop` restart recovery, with automatic retries for ordinary pauses.
 - Fail-closed crash recovery: unfinished jobs from an unclean session require inspection and cancellation, never automatic replay.
-- 53 automated tests covering plan validation, materials, construction, persistence, scheduling, failure behavior, and Builder's Chest ownership.
+- 61 automated tests, plus a real-Paper self-test plugin (`paper-selftest`, development only), covering plan validation, materials, construction, persistence, scheduling, failure behavior, and Builder's Chest ownership.
 
 ## Import a Litematica schematic
 
@@ -76,7 +76,7 @@ Operators (`blueprints.import`) can turn a `.litematic` file into a blueprint:
 2. Run `/blueprint import <file> [id]`. The `.litematic` extension is optional, and tab completion lists the folder. Without an id, one is made from the file name.
 3. Check `/blueprint materials <id>`, then build it like any other blueprint.
 
-Only block states are imported. Chests' contents, signs' text, entities, and scheduled ticks are ignored. Blocks outside the supported palette (torches, lanterns, flowers, beds, and so on) are **skipped and listed** in the import message, so the build may have gaps where those were. Waterlogged and powered states are switched off. All regions of a multi-region schematic are combined, and the origin is the combined minimum corner. Current limits are 4,096 supported blocks and 65 blocks per side; larger schematics are rejected with their size.
+Only block states are imported; entities and container contents are ignored. Refused block types (see Supported blocks below) are **skipped and listed** in the import message so you can place them by hand. States are adjusted the same way as Creative capture. All regions of a multi-region schematic are combined, and the origin is the combined minimum corner. Current limits are 4,096 supported blocks and 65 blocks per side; larger schematics are rejected with their size.
 
 ## Builder's Chest
 
@@ -96,6 +96,6 @@ Jobs started before this feature keep using their original chest.
 
 V1 is for trusted test builders. It does **not** integrate claim protection or CoreProtect, emit synthetic player-placement events, or establish ownership of arbitrary chests. Builds can only draw from the starter's own Builder's Chest, but granting build permission still allows placement in otherwise protected areas. Do not grant it broadly on the existing multiplayer server yet.
 
-Supported blocks are a conservative palette of common masonry, planks/logs/wood, wool/concrete/glass/terracotta, stairs, slabs, trapdoors, and doors. Exact rules are in `MaterialCost.java`. Waterlogged/powered states, containers, entities, fluids, command blocks, spawners, falling blocks, pistons/observers, and other special mechanisms are unsupported. No NBT/container contents are imported. No hologram, upload protocol, or client mod is included yet.
+Supported blocks: about 785 block types on Paper 26.2, including all plain full blocks, stairs, slabs, walls, fences, gates, panes, bars, doors, trapdoors, logs and pillars, leaves, glass, carpets, torches, lanterns, chains, ladders, buttons, pressure plates, levers, flowers, saplings and tall plants, observers, and pistons. Rules are in `MaterialCost.java`. Refused: anything that stores contents or data (chests, furnaces, signs, banners, beds, campfires, heads), technical blocks (command blocks, spawners, barriers), fluids, rails and redstone wiring, crops and vines, and multi-count blocks (candles, sea pickles, petals, snow layers). Waterlogged and powered states are captured dry and unpowered, leaves are kept from decaying, and respawn anchors and composters are captured empty so a build never pays out stored materials.
 
 See [the acceptance test](docs/TESTING.md), [architecture and recovery semantics](docs/ARCHITECTURE.md), and [roadmap](docs/ROADMAP.md).
