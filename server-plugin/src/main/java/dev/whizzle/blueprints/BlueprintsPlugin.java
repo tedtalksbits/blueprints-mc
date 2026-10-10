@@ -4,7 +4,7 @@ import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
-public final class BlueprintsPlugin extends JavaPlugin {
+public class BlueprintsPlugin extends JavaPlugin {
     private BuildManager buildManager;
     private BukkitTask task;
 
@@ -14,7 +14,7 @@ public final class BlueprintsPlugin extends JavaPlugin {
         BlueprintRepository blueprints = new BlueprintRepository(this);
         blueprints.load();
         JobRepository jobs = new JobRepository(this);
-        buildManager = new BuildManager(this, blueprints, jobs);
+        buildManager = new BuildManager(this, jobs);
 
         BlueprintCommand command = new BlueprintCommand(blueprints, buildManager);
         PluginCommand registered = getCommand("blueprint");
@@ -30,6 +30,6 @@ public final class BlueprintsPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         if (task != null) task.cancel();
-        if (buildManager != null) buildManager.save();
+        if (buildManager != null) buildManager.shutdown();
     }
 }

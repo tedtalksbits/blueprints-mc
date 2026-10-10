@@ -12,7 +12,7 @@ import java.util.*;
 public final class BlueprintRepository {
     private final JavaPlugin plugin;
     private final File directory;
-    private final Map<String, BlueprintDefinition> blueprints = new TreeMap<>();
+    private final Map<String, ConstructionPlan> blueprints = new TreeMap<>();
 
     public BlueprintRepository(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -30,8 +30,8 @@ public final class BlueprintRepository {
 
         for (File file : files) {
             try {
-                BlueprintDefinition def = parse(file);
-                blueprints.put(def.id().toLowerCase(Locale.ROOT), def);
+                ConstructionPlan def = PlanCompiler.compile(parse(file));
+                if (blueprints.putIfAbsent(def.id().toLowerCase(Locale.ROOT), def) != null) throw new IllegalArgumentException("Duplicate blueprint id: " + def.id());
             } catch (Exception e) {
                 plugin.getLogger().severe("Failed to load " + file.getName() + ": " + e.getMessage());
             }
@@ -39,21 +39,23 @@ public final class BlueprintRepository {
         plugin.getLogger().info("Loaded " + blueprints.size() + " blueprint(s).");
     }
 
-    public Optional<BlueprintDefinition> get(String id) {
+    public Optional<ConstructionPlan> get(String id) {
         return Optional.ofNullable(blueprints.get(id.toLowerCase(Locale.ROOT)));
     }
 
-    public Collection<BlueprintDefinition> all() {
+    public Collection<ConstructionPlan> all() {
         return Collections.unmodifiableCollection(blueprints.values());
     }
 
     private BlueprintDefinition parse(File file) {
-        YamlConfiguration yml = YamlConfiguration.loadConfiguration(file);
+        YamlConfiguration yml = new YamlConfiguration();
+        try { yml.load(file); } catch (Exception e) { throw new IllegalArgumentException("Invalid YAML", e); }
         String id = Objects.requireNonNullElse(yml.getString("id"), stripExtension(file.getName()));
         String name = Objects.requireNonNullElse(yml.getString("name"), id);
-        List<Map<?, ?>> raw = yml.getMapList("blocks");
+        List<?> raw = Objects.requireNonNull(yml.getList("blocks"), "Missing blocks list");
         List<BlueprintBlock> blocks = new ArrayList<>(raw.size());
-        for (Map<?, ?> row : raw) {
+        for (Object entry : raw) {
+            if (!(entry instanceof Map<?, ?> row)) throw new IllegalArgumentException("Block entry must be a mapping");
             int x = intValue(row.get("x"));
             int y = intValue(row.get("y"));
             int z = intValue(row.get("z"));
@@ -61,14 +63,11 @@ public final class BlueprintRepository {
             if (data == null) throw new IllegalArgumentException("Block entry missing block-data");
             blocks.add(new BlueprintBlock(x, y, z, data.toString()));
         }
-        blocks.sort(Comparator.comparingInt(BlueprintBlock::y)
-            .thenComparingInt(BlueprintBlock::x)
-            .thenComparingInt(BlueprintBlock::z));
         return new BlueprintDefinition(id, name, List.copyOf(blocks));
     }
 
     private static int intValue(Object value) {
-        if (value instanceof Number n) return n.intValue();
+        if (value instanceof Integer n) return n;
         return Integer.parseInt(String.valueOf(value));
     }
 

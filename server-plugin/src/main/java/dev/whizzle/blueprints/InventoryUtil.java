@@ -6,21 +6,26 @@ import org.bukkit.inventory.ItemStack;
 
 public final class InventoryUtil {
     private InventoryUtil() {}
-
+    private static boolean eligible(ItemStack stack, Material material) {
+        return stack != null && stack.getType() == material && stack.isSimilar(new ItemStack(material));
+    }
+    /** Count first; insufficient materials never partially debit the inventory. Named/custom items are excluded. */
     public static boolean consume(Inventory inventory, Material material, int amount) {
+        if (amount < 1) throw new IllegalArgumentException("Positive material cost required");
         int found = 0;
-        for (ItemStack stack : inventory.getContents()) {
-            if (stack != null && stack.getType() == material) found += stack.getAmount();
-        }
+        for (ItemStack stack : inventory.getStorageContents()) if (eligible(stack, material)) found += stack.getAmount();
         if (found < amount) return false;
-
         int remaining = amount;
-        for (int slot = 0; slot < inventory.getSize() && remaining > 0; slot++) {
+        for (int slot = 0; slot < inventory.getStorageContents().length && remaining > 0; slot++) {
             ItemStack stack = inventory.getItem(slot);
-            if (stack == null || stack.getType() != material) continue;
+            if (!eligible(stack, material)) continue;
             int take = Math.min(remaining, stack.getAmount());
-            stack.setAmount(stack.getAmount() - take);
-            if (stack.getAmount() <= 0) inventory.setItem(slot, null);
+            if (take == stack.getAmount()) inventory.setItem(slot, null);
+            else {
+                ItemStack replacement = stack.clone();
+                replacement.setAmount(stack.getAmount() - take);
+                inventory.setItem(slot, replacement);
+            }
             remaining -= take;
         }
         return true;

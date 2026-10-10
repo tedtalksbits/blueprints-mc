@@ -1,6 +1,5 @@
 package dev.whizzle.blueprints;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
@@ -23,6 +22,7 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
         if (args.length == 0) {
             sender.sendMessage("§e/blueprint list");
             sender.sendMessage("§e/blueprint start <id> <x> <y> <z> §7(look at Builder's Chest)");
+            sender.sendMessage("§e/blueprint materials <id>");
             sender.sendMessage("§e/blueprint status");
             sender.sendMessage("§e/blueprint cancel <job-id>");
             return true;
@@ -30,9 +30,17 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "list" -> {
                 sender.sendMessage("§6Blueprints:");
-                for (BlueprintDefinition def : repository.all()) {
-                    sender.sendMessage("§e- " + def.id() + " §7(" + def.blocks().size() + " blocks) §f" + def.name());
+                for (ConstructionPlan def : repository.all()) {
+                    sender.sendMessage("§e- " + def.id() + " §7(" + def.blockCount() + " blocks) §f" + def.name());
                 }
+                return true;
+            }
+            case "materials" -> {
+                if (args.length != 2) return false;
+                ConstructionPlan plan = repository.get(args[1]).orElse(null);
+                if (plan == null) { sender.sendMessage("§cUnknown blueprint."); return true; }
+                sender.sendMessage("§6Full blueprint materials (existing matching blocks cost nothing):");
+                plan.materials().forEach((item, count) -> sender.sendMessage("§e" + count + " §f" + item));
                 return true;
             }
             case "status" -> {
@@ -42,7 +50,7 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
                 for (BuildJob job : builds.jobs()) {
                     if (!admin && (who == null || !job.owner().equals(who))) continue;
                     sender.sendMessage("§e" + job.id().toString().substring(0, 8) + " §f" + job.blueprintId()
-                        + " §7#" + job.nextBlock() + " §f" + job.state()
+                        + " §7" + job.nextBlock() + "/" + job.plan().steps().size() + " steps" + " §f" + job.state()
                         + (job.pauseReason().isBlank() ? "" : " §7- " + job.pauseReason()));
                 }
                 return true;
@@ -51,14 +59,16 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
                 if (!(sender instanceof Player player) || args.length < 2) return false;
                 UUID id = resolveJobId(args[1]);
                 if (id == null) { sender.sendMessage("§cUnknown or ambiguous job id."); return true; }
-                boolean ok = builds.cancel(id, player.getUniqueId(), sender.hasPermission("blueprints.admin"));
+                boolean ok;
+                try { ok = builds.cancel(id, player.getUniqueId(), sender.hasPermission("blueprints.admin")); }
+                catch (IllegalStateException e) { sender.sendMessage("§c" + e.getMessage()); return true; }
                 sender.sendMessage(ok ? "§aConstruction cancelled." : "§cCould not cancel that job.");
                 return true;
             }
             case "start" -> {
                 if (!(sender instanceof Player player)) { sender.sendMessage("Players only."); return true; }
                 if (args.length != 5) return false;
-                BlueprintDefinition def = repository.get(args[1]).orElse(null);
+                ConstructionPlan def = repository.get(args[1]).orElse(null);
                 if (def == null) { sender.sendMessage("§cUnknown blueprint: " + args[1]); return true; }
                 int x, y, z;
                 try { x = Integer.parseInt(args[2]); y = Integer.parseInt(args[3]); z = Integer.parseInt(args[4]); }
@@ -93,8 +103,8 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) return List.of("list", "start", "status", "cancel");
-        if (args.length == 2 && args[0].equalsIgnoreCase("start")) return repository.all().stream().map(BlueprintDefinition::id).toList();
+        if (args.length == 1) return List.of("list", "materials", "start", "status", "cancel");
+        if (args.length == 2 && (args[0].equalsIgnoreCase("start") || args[0].equalsIgnoreCase("materials"))) return repository.all().stream().map(ConstructionPlan::id).toList();
         return List.of();
     }
 }
