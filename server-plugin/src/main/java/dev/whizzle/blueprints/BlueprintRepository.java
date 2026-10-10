@@ -7,6 +7,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.nio.channels.FileChannel;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public final class BlueprintRepository {
@@ -45,6 +50,47 @@ public final class BlueprintRepository {
 
     public Collection<ConstructionPlan> all() {
         return Collections.unmodifiableCollection(blueprints.values());
+    }
+
+    public static void validateId(String id) {
+        if (id == null || !id.matches("[a-z0-9][a-z0-9_-]{0,63}"))
+            throw new IllegalArgumentException("Blueprint id must use 1..64 lowercase letters, digits, underscores, or hyphens");
+    }
+
+    /** Publish a fully validated capture. Existing source files and plans are never overwritten. */
+    public void saveNew(ConstructionPlan plan) {
+        validateId(plan.id());
+        if (blueprints.containsKey(plan.id())) throw new IllegalArgumentException("Blueprint already exists: " + plan.id());
+        ConstructionPlan verified = PlanCompiler.compile(new BlueprintDefinition(plan.id(), plan.name(),
+            plan.steps().stream().flatMap(s -> s.blocks().stream()).toList()));
+        if (!verified.equals(plan)) throw new IllegalArgumentException("Capture plan must be canonical and have validated costs");
+        Path temporary = null;
+        try {
+            Files.createDirectories(directory.toPath());
+            // Prefix also avoids Windows reserved basenames such as CON and NUL.
+            Path target = directory.toPath().resolve("blueprint-" + plan.id() + ".yml");
+            if (Files.exists(target)) throw new IllegalArgumentException("Blueprint file already exists: " + plan.id());
+            YamlConfiguration yaml = new YamlConfiguration();
+            yaml.set("id", plan.id());
+            yaml.set("name", plan.name());
+            List<Map<String, Object>> blocks = new ArrayList<>();
+            for (ConstructionStep step : plan.steps()) for (BlueprintBlock b : step.blocks())
+                blocks.add(Map.of("x", b.x(), "y", b.y(), "z", b.z(), "block-data", b.blockData()));
+            yaml.set("blocks", blocks);
+            temporary = Files.createTempFile(directory.toPath(), ".capture-", ".tmp");
+            try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
+                ByteBuffer bytes = ByteBuffer.wrap(yaml.saveToString().getBytes(StandardCharsets.UTF_8));
+                while (bytes.hasRemaining()) channel.write(bytes);
+                channel.force(true);
+            }
+            Files.move(temporary, target); // No REPLACE_EXISTING: a concurrent/external file must survive.
+            blueprints.put(plan.id(), plan);
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not save blueprint: " + plan.id(), e);
+        } finally {
+            if (temporary != null) try { Files.deleteIfExists(temporary); }
+            catch (IOException e) { plugin.getLogger().warning("Could not remove capture temporary file: " + temporary); }
+        }
     }
 
     private BlueprintDefinition parse(File file) {

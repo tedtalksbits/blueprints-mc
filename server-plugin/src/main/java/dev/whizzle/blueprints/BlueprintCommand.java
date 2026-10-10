@@ -21,13 +21,28 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
             sender.sendMessage("§e/blueprint list");
-            sender.sendMessage("§e/blueprint start <id> <x> <y> <z> §7(look at Builder's Chest)");
+            sender.sendMessage("§e/blueprint start <id> <x> <y> <z> [0|90|180|270] [none|x|z] §7(look at Builder's Chest)");
+            sender.sendMessage("§e/blueprint capture <id> <x1> <y1> <z1> <x2> <y2> <z2> §7(Creative)");
             sender.sendMessage("§e/blueprint materials <id>");
             sender.sendMessage("§e/blueprint status");
             sender.sendMessage("§e/blueprint cancel <job-id>");
             return true;
         }
         switch (args[0].toLowerCase(Locale.ROOT)) {
+            case "capture" -> {
+                if (!(sender instanceof Player player)) { sender.sendMessage("Players only."); return true; }
+                if (args.length != 8) { sender.sendMessage("§e/blueprint capture <id> <x1> <y1> <z1> <x2> <y2> <z2>"); return true; }
+                try {
+                    ConstructionPlan plan = BlueprintCapture.capture(player, args[1],
+                        Integer.parseInt(args[2]), Integer.parseInt(args[3]), Integer.parseInt(args[4]),
+                        Integer.parseInt(args[5]), Integer.parseInt(args[6]), Integer.parseInt(args[7]));
+                    repository.saveNew(plan);
+                    sender.sendMessage("§aSaved " + plan.id() + ": " + plan.blockCount() + " blocks. Origin is the selection's minimum X/Y/Z corner.");
+                    sender.sendMessage("§7Use /blueprint materials " + plan.id() + " to see its Survival cost.");
+                } catch (NumberFormatException e) { sender.sendMessage("§cCoordinates must be integers."); }
+                catch (IllegalArgumentException | IllegalStateException e) { sender.sendMessage("§c" + e.getMessage()); }
+                return true;
+            }
             case "list" -> {
                 sender.sendMessage("§6Blueprints:");
                 for (ConstructionPlan def : repository.all()) {
@@ -67,12 +82,16 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
             }
             case "start" -> {
                 if (!(sender instanceof Player player)) { sender.sendMessage("Players only."); return true; }
-                if (args.length != 5) return false;
+                if (args.length < 5 || args.length > 7) return false;
                 ConstructionPlan def = repository.get(args[1]).orElse(null);
                 if (def == null) { sender.sendMessage("§cUnknown blueprint: " + args[1]); return true; }
                 int x, y, z;
                 try { x = Integer.parseInt(args[2]); y = Integer.parseInt(args[3]); z = Integer.parseInt(args[4]); }
                 catch (NumberFormatException e) { sender.sendMessage("§cCoordinates must be integers."); return true; }
+
+                BlueprintTransform transform;
+                try { transform = BlueprintTransform.parse(args.length > 5 ? args[5] : "0", args.length > 6 ? args[6] : "none"); }
+                catch (IllegalArgumentException e) { sender.sendMessage("§c" + e.getMessage()); return true; }
 
                 Block target = player.getTargetBlockExact(6);
                 if (target == null || !(target.getState() instanceof Chest chest)) {
@@ -80,10 +99,11 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 try {
-                    BuildJob job = builds.start(player, def, new Location(player.getWorld(), x, y, z), chest);
+                    ConstructionPlan positioned = PlanTransformer.apply(def, transform);
+                    BuildJob job = builds.start(player, positioned, new Location(player.getWorld(), x, y, z), chest);
                     sender.sendMessage("§aStarted §f" + def.name() + "§a. Job: §f" + job.id().toString().substring(0, 8));
                     sender.sendMessage("§7Blocks will be consumed from the chest you're looking at and placed with exact block states.");
-                } catch (IllegalStateException e) {
+                } catch (IllegalArgumentException | IllegalStateException e) {
                     sender.sendMessage("§c" + e.getMessage());
                 }
                 return true;
@@ -103,8 +123,10 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) return List.of("list", "materials", "start", "status", "cancel");
+        if (args.length == 1) return List.of("list", "materials", "capture", "start", "status", "cancel");
         if (args.length == 2 && (args[0].equalsIgnoreCase("start") || args[0].equalsIgnoreCase("materials"))) return repository.all().stream().map(ConstructionPlan::id).toList();
+        if (args[0].equalsIgnoreCase("start") && args.length == 6) return List.of("0", "90", "180", "270");
+        if (args[0].equalsIgnoreCase("start") && args.length == 7) return List.of("none", "x", "z");
         return List.of();
     }
 }

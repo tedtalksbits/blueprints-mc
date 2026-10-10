@@ -6,9 +6,11 @@ Pinned Paper 26.2/Java 25 build, Gradle wrapper, validated immutable plans, pair
 
 Next: complete `TESTING.md` on an isolated Paper 26.2 server and verify Geyser commands. Add claim protection and CoreProtect hooks before granting construction permission broadly. Profile persistence limits and test actual crash/world-save behavior.
 
-## M1 — Positioning and preview
+## M1 — Capture and positioning (implemented); preview next
 
-Add tested rotation/mirroring for coordinates and block states, then a Fabric client with blueprint browsing, hologram opacity, simple movement controls, and material/progress displays. Research the current Fabric 26.2 APIs at implementation time.
+Creative selection capture and tested rotation/mirroring now support player-created builds without hand-editing YAML. Captures retain the same validation and material rules as the demo. Jobs persist transformed plans.
+
+Next, after live Paper acceptance: a Fabric client with blueprint browsing, hologram opacity, simple movement controls, and material/progress displays. Research the current Fabric 26.2 APIs at implementation time.
 
 ## M2 — Litematic import and bounded protocol
 

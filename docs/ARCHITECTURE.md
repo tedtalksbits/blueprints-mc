@@ -8,6 +8,16 @@
 
 `BuildManager` runs on Paper's main thread. `InventoryUtil` counts eligible items before changing any slot, so a missing two-slab cost cannot partially consume inventory. Eligibility compares with the material's ordinary item stack; custom metadata is excluded. `JobRepository` serializes schema-1 snapshots, forces the temporary file, and atomically replaces `jobs.yml`. It refuses unsupported schemas or malformed jobs rather than skipping funded work.
 
+## Creative capture and transforms
+
+`BlueprintCapture` reads an inclusive, nearby Creative cuboid only after checking its volume, dimensions, height, permission, and every touched chunk. It ignores air, rejects unsupported states, and passes the result to the existing compiler. The minimum selection corner becomes the local origin. The cuboid limit applies to all selected cells, not just non-air cells, so a sparse huge selection cannot stall the server. No block entities or entities are serialized.
+
+`BlueprintRepository.saveNew` verifies canonical plans/costs, writes a complete temporary source file, then publishes it with a non-replacing move. Existing IDs and filenames are refused. Only a successful save registers the blueprint in memory. Source-file publication is not a funded-job transaction; after an interrupted capture the operator can retry or inspect the source file. Temporary files are ignored by the loader.
+
+`BlueprintTransform` holds pure coordinate geometry: mirror local X or Z first, then rotate clockwise around the unchanged origin. `PlanTransformer` transforms the supported palette using Paper's typed block-data interfaces (`Directional`, `Orientable`, `Stairs`, `Door`), then recompiles and reorders the plan. Reflections reverse stair corner handedness and door hinges, even when the facing axis is unchanged. This represents a geometric reflection. Quarter turns swap horizontal log axes; vertical axes, halves, slab types, and open states stay unchanged. New stateful block families must extend both material and transform handling together.
+
+The compiled transformed plan is the persisted job snapshot; restart needs neither the source file nor a separate transform replay. Tests cover four-turn identity, double-reflection identity, every stair corner/facing combination, door pairing/cost, metadata preservation, and the capture/start command path. MockBukkit does not implement native `BlockData.rotate/mirror`; the typed state changes used here are exercised directly instead of substituting a fake transform in tests. Real Paper behavior remains an acceptance-test requirement.
+
 ## One construction cycle
 
 The global budget is `construction.steps-per-cycle` (1..16). Jobs receive round-robin attempts, at most one per job per cycle. A paused job uses an attempt, preventing a large population of blocked jobs from causing unbounded scanning. The interval defaults to 10 ticks.

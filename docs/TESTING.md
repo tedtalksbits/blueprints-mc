@@ -10,6 +10,8 @@ Run `./gradlew build` (Windows: `.\gradlew.bat build`) with JDK 25. The JUnit su
 - Cursor/plan persistence, clean restart continuation, unclean recovery quarantine, malformed/legacy snapshots, failed atomic replacement.
 - Cancellation authorization/no refunds, owner mode/permission/height checks, global fairness, unloaded destination checks before access, failure stopping further debits.
 - Actual plugin loading and bundled demo compilation.
+- Creative capture, duplicate-file protection, unloaded/oversized selections, and the complete capture-to-transformed-construction command flow.
+- Coordinate/state transforms, all stair corner/facing reflections, log axes, door hinges, unchanged costs, and persisted transformed plans.
 
 Passing these tests is not a live Paper/Geyser acceptance result. The first implementation pass built the JAR and passed this suite; live server testing is still required.
 
@@ -29,3 +31,13 @@ Passing these tests is not a live Paper/Geyser acceptance result. The first impl
 12. Only after Java/Paper behavior is accepted, test the command/chest workflow via Bedrock/Geyser. No client mod is required for these commands. Verify CoreProtect expectations separately: V1 does not log plugin placements through CoreProtect.
 
 Record the Paper build, Java version, plugin commit, observed counts/states, and any errors. Do not install this first slice directly onto the existing survival server before completing this test and choosing a protection/audit integration policy.
+
+## Capture and transform acceptance
+
+1. In Creative, make a supported small design with an asymmetric outline, a corner stair, an X-axis log, a trapdoor, and a complete door. Keep containers outside the selected cuboid.
+2. Run `/blueprint capture <id> <x1> <y1> <z1> <x2> <y2> <z2>` with its corners reversed. Verify the minimum selection corner is the origin, air is skipped, the original design is unchanged, and `/blueprint materials <id>` has the correct totals. A duplicate capture must leave the original file intact.
+3. Switch to Survival, fund a chest at an empty destination, and start the capture without transform arguments. Verify the result matches the original design.
+4. At fresh origins, test `90 none`, `180 none`, `270 none`, `0 x`, `0 z`, and `90 x`. Leave room for negative local offsets: transforms pivot around the fixed origin. Verify outline geometry, facings, log axes, corner stair handedness, door hinge/halves, slab costs, and trapdoor half/open state.
+5. Normally stop and restart during a transformed build. Rejoin in Survival and verify it continues from the stored transformed plan with no extra charge. Editing the original capture while stopped must not affect this job.
+6. Verify capture rejects Survival mode, missing capture permission, unloaded chunks, a cuboid over 4,096 cells, a side over 65 blocks, a distant cuboid, an empty selection, containers, and half a door. These cases must not create a usable blueprint or load chunks.
+7. Transfer a captured YAML to a separate stopped test server's blueprint directory. Start that server and verify the design can be listed and constructed there without the original Creative world.
