@@ -75,11 +75,10 @@ class BlueprintCaptureTest {
         assertTrue(server.dispatchCommand(player, "blueprint capture custom 1 65 1 1 65 1"));
         assertTrue(player.nextMessage().contains("Saved custom")); player.nextMessage();
         world.getBlockAt(0, 65, 2).setType(Material.CHEST);
+        BuildersChest.claim((Chest) world.getBlockAt(0, 65, 2).getState(), player);
         Chest chest = (Chest) world.getBlockAt(0, 65, 2).getState(); chest.getBlockInventory().addItem(new ItemStack(Material.OAK_STAIRS, 1));
         player.setGameMode(GameMode.SURVIVAL);
-        // MockBukkit ray tracing is not implemented: stub only the player's selected funding block.
-        PlayerMock aimed = spy(player); doReturn(world.getBlockAt(0, 65, 2)).when(aimed).getTargetBlockExact(6);
-        assertTrue(server.dispatchCommand(aimed, "blueprint start custom 4 65 4 90 x"));
+        assertTrue(server.dispatchCommand(player, "blueprint start custom 4 65 4 90 x"));
         server.getScheduler().performTicks(10);
         assertEquals("minecraft:oak_stairs[facing=east,half=top,shape=inner_right,waterlogged=false]", world.getBlockAt(4, 65, 4).getBlockData().getAsString());
         assertTrue(chest.getBlockInventory().isEmpty());

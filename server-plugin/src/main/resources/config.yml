@@ -4,3 +4,18 @@ construction:
   # Global attempt budget across all jobs, clamped to 1..16.
   # Each job gets at most one step per cycle; a door is one two-block step.
   steps-per-cycle: 1
+  # Concurrent unfinished jobs, server-wide (1-64) and per player. Each job also needs its own Builder's Chest.
+  max-active-jobs: 16
+  max-active-jobs-per-player: 2
+
+builders-chest:
+  # How far /blueprint start searches for your own Builder's Chest, in blocks from you (1-64).
+  search-radius: 16
+  # Shaped crafting recipe. 1-3 rows of equal length (up to 3 characters); a space is an empty slot.
+  # Each letter maps to an item id. Each active build needs its own chest, so this sets the cost of parallel builds.
+  recipe:
+    shape: ["PIP", "ICI", "PIP"]
+    ingredients:
+      P: paper
+      I: iron_ingot
+      C: chest

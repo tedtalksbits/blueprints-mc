@@ -28,6 +28,7 @@ class ConstructionTest {
         owner = server.addPlayer(); owner.setOp(true); owner.setGameMode(GameMode.SURVIVAL);
         owner.teleport(new Location(world, 0, 65, 0));
         world.getBlockAt(0, 65, 0).setType(Material.CHEST);
+        BuildersChest.claim((Chest) world.getBlockAt(0, 65, 0).getState(), owner);
         chest = (Chest) world.getBlockAt(0, 65, 0).getState();
         world.loadChunk(0, 0);
         plugin = MockBukkit.createMockPlugin();
@@ -126,10 +127,20 @@ class ConstructionTest {
         PlayerMock second = server.addPlayer(); second.setOp(true); second.setGameMode(GameMode.SURVIVAL);
         second.teleport(new Location(world, 0, 65, 6));
         world.getBlockAt(0, 65, 6).setType(Material.CHEST);
+        BuildersChest.claim((Chest) world.getBlockAt(0, 65, 6).getState(), second);
         Chest otherChest = (Chest) world.getBlockAt(0, 65, 6).getState(); otherChest.getBlockInventory().addItem(new ItemStack(Material.STONE, 2));
         BuildJob other = manager.start(second, plan(stone(0), stone(1)), new Location(world, 2, 65, 6), otherChest);
         manager.tick(); assertEquals(1, first.nextBlock() + other.nextBlock());
         manager.tick(); assertEquals(1, first.nextBlock()); assertEquals(1, other.nextBlock());
+    }
+    @Test void onlyTheStartersOwnBuildersChestCanFund() {
+        world.getBlockAt(0, 65, 4).setType(Material.CHEST);
+        Chest plain = (Chest) world.getBlockAt(0, 65, 4).getState();
+        assertThrows(IllegalStateException.class, () -> manager.start(owner, plan(stone(0)), new Location(world, 2, 65, 2), plain));
+        BuildersChest.claim(plain, server.addPlayer());
+        Chest someoneElses = (Chest) world.getBlockAt(0, 65, 4).getState();
+        assertThrows(IllegalStateException.class, () -> manager.start(owner, plan(stone(0)), new Location(world, 2, 65, 2), someoneElses));
+        assertTrue(manager.jobs().isEmpty());
     }
     @Test void limitsAndPermissionsRejectBeforeMutation() {
         owner.setOp(false);

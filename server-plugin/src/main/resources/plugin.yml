@@ -7,7 +7,7 @@ description: Survival-funded, time-based schematic construction for Paper.
 commands:
   blueprint:
     description: Manage blueprint construction jobs.
-    usage: /blueprint <list|materials|capture|start|status|cancel>
+    usage: /blueprint <list|materials|capture|start|status|cancel|givechest>
     permission: blueprints.use
 permissions:
   blueprints.use:
@@ -16,6 +16,7 @@ permissions:
     description: Start trusted V1 construction jobs (no claim-plugin integration yet).
     default: op
   blueprints.admin:
+    description: Inspect/cancel any job and use /blueprint givechest.
     default: op
   blueprints.capture:
     description: Capture small Creative selections as validated blueprints.

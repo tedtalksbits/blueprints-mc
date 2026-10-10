@@ -12,7 +12,7 @@ public final class BuildManager {
     private final JavaPlugin plugin;
     private final JobRepository repository;
     private final Map<UUID, BuildJob> jobs = new LinkedHashMap<>();
-    private final int budget;
+    private final int budget, maxActive, maxActivePerPlayer;
     private int rotation, saveCounter;
     private boolean failed;
 
@@ -20,6 +20,8 @@ public final class BuildManager {
         this.plugin = plugin;
         this.repository = repository;
         budget = Math.clamp(plugin.getConfig().getInt("construction.steps-per-cycle", 1), 1, 16);
+        maxActive = Math.clamp(plugin.getConfig().getInt("construction.max-active-jobs", 16), 1, 64);
+        maxActivePerPlayer = Math.clamp(plugin.getConfig().getInt("construction.max-active-jobs-per-player", 2), 1, maxActive);
         for (BuildJob job : repository.load()) {
             // Revalidate persisted snapshots against this server's block registry, including cost and order.
             ConstructionPlan checked = PlanCompiler.compile(new BlueprintDefinition(job.plan().id(), job.plan().name(),
@@ -36,13 +38,14 @@ public final class BuildManager {
         if (!owner.hasPermission("blueprints.build") || owner.getGameMode() != GameMode.SURVIVAL)
             throw new IllegalStateException("Construction requires Survival mode and blueprints.build permission");
         if (jobs.size() >= 64) throw new IllegalStateException("Job history limit reached (64); archive jobs.yml while server is stopped");
-        if (jobs.values().stream().filter(j -> !j.terminal()).count() >= 16)
-            throw new IllegalStateException("Active job limit reached (16)");
-        if (jobs.values().stream().anyMatch(j -> !j.terminal() && j.owner().equals(owner.getUniqueId())))
-            throw new IllegalStateException("Finish or cancel your existing job first");
+        if (jobs.values().stream().filter(j -> !j.terminal()).count() >= maxActive)
+            throw new IllegalStateException("Server active job limit reached (" + maxActive + ")");
+        if (jobs.values().stream().filter(j -> !j.terminal() && j.owner().equals(owner.getUniqueId())).count() >= maxActivePerPlayer)
+            throw new IllegalStateException("You already have " + maxActivePerPlayer + " active builds; finish or cancel one first");
         World world = Objects.requireNonNull(origin.getWorld());
         if (!world.equals(chest.getWorld()) || !world.equals(owner.getWorld())) throw new IllegalStateException("Chest and build must share a world");
         requireSingleChest(chest);
+        if (!BuildersChest.isOwnedBy(chest, owner)) throw new IllegalStateException("Builds must be funded from your own Builder's Chest");
         BuildJob job = new BuildJob(UUID.randomUUID(), owner.getUniqueId(), plan, world.getUID(),
             origin.getBlockX(), origin.getBlockY(), origin.getBlockZ(), chest.getX(), chest.getY(), chest.getZ(),
             0, BuildJob.State.BUILDING, "");
@@ -56,13 +59,16 @@ public final class BuildManager {
             if (jobs.values().stream().anyMatch(j -> !j.terminal() && j.world().equals(world.getUID()) && occupies(j, x, y, z)))
                 throw new IllegalStateException("Build overlaps another active job");
         }
-        if (jobs.values().stream().anyMatch(j -> !j.terminal() && j.world().equals(world.getUID())
-            && ((j.chestX() == chest.getX() && j.chestY() == chest.getY() && j.chestZ() == chest.getZ())
-                || occupies(j, chest.getX(), chest.getY(), chest.getZ()))))
-            throw new IllegalStateException("Chest is already reserved by another job");
+        if (chestReserved(chest)) throw new IllegalStateException("Chest is already reserved by another job");
         jobs.put(job.id(), job);
         save();
         return job;
+    }
+    /** True while an active job draws from this chest or will build over it. */
+    public boolean chestReserved(Chest chest) {
+        UUID world = chest.getWorld().getUID();
+        return jobs.values().stream().anyMatch(j -> !j.terminal() && j.world().equals(world)
+            && occupies(j, chest.getX(), chest.getY(), chest.getZ()));
     }
     private static boolean occupies(BuildJob job, int x, int y, int z) {
         if (job.chestX() == x && job.chestY() == y && job.chestZ() == z) return true;
