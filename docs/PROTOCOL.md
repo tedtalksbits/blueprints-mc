@@ -10,7 +10,7 @@ Encoding matches Minecraft's `FriendlyByteBuf`: **VarInt**, **Int** (4 bytes, bi
 | Channel | Direction | Body |
 |---|---|---|
 | `blueprints:hello` | C→S | VarInt protocol |
-| `blueprints:welcome` | S→C | VarInt protocol, Bool canBuild, VarInt chestSearchRadius |
+| `blueprints:welcome` | S→C | VarInt protocol, Bool canBuild, VarInt chestSearchRadius, Bool canCapture |
 | `blueprints:catalog_request` | C→S | (empty) |
 | `blueprints:catalog` | S→C | VarInt n, n × (String id, String name, VarInt blocks, VarInt sizeX, sizeY, sizeZ) |
 | `blueprints:plan_request` | C→S | String id |
@@ -20,6 +20,7 @@ Encoding matches Minecraft's `FriendlyByteBuf`: **VarInt**, **Int** (4 bytes, bi
 | `blueprints:start` | C→S | String id, Int originX, originY, originZ, VarInt rotation (0/90/180/270), VarInt mirror (0 none, 1 x, 2 z) |
 | `blueprints:cancel` | C→S | String jobId (full UUID or unique prefix) |
 | `blueprints:result` | S→C | Bool ok, String message |
+| `blueprints:capture` | C→S | String id, Int x1, y1, z1, Int x2, y2, z2 (inclusive corners, any order) |
 | `blueprints:jobs_request` | C→S | (empty) |
 | `blueprints:jobs` | S→C | VarInt n, n × (String jobId, String blueprintId, String name, VarInt done, VarInt total, String state, String reason, Int originX, originY, originZ) |
 
@@ -29,6 +30,7 @@ Encoding matches Minecraft's `FriendlyByteBuf`: **VarInt**, **Int** (4 bytes, bi
 - Transforms match `/blueprint start`: mirror first (`x` negates local X, `z` negates local Z), then rotate
   clockwise seen from above. The origin stays fixed, so a transformed build can extend into negative offsets. The
   client keeps the visible box in place by sending `origin = desiredMinCorner − minCornerOfTransformedOffsets`.
+- `capture` follows `/blueprint capture` (Creative, `blueprints.capture`, supported blocks, limits); it replies with `result` and pushes `catalog` on success.
 - `start` replies with `result`, then pushes `jobs` on success. `cancel` replies with `result` and `jobs`.
 - The server rate-limits each player to 20 requests per second and answers malformed requests with a failed
   `result`.

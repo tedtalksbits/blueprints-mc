@@ -36,7 +36,8 @@ public final class LitematicImport {
     static Result convert(Map<String, Object> root, String id) {
         Map<String, Object> regions = Nbt.compound(root, "Regions");
         Object metadata = root.get("Metadata");
-        String name = metadata instanceof Map<?, ?> m && m.get("Name") instanceof String s && !s.isBlank() ? s : id;
+        // Litematica writes "Unnamed" when the player never named the schematic; the file-based id reads better.
+        String name = metadata instanceof Map<?, ?> m && m.get("Name") instanceof String s && !s.isBlank() && !s.equalsIgnoreCase("Unnamed") ? s : id;
         Map<String, Integer> skipped = new TreeMap<>();
         int normalized = 0;
         List<int[]> positions = new ArrayList<>();

@@ -52,7 +52,7 @@ class ClientBridgeTest {
     }
     @Test void helloGetsWelcomeWithPermissionAndRadius() {
         Wire.Reader in = request(ClientBridge.HELLO, new Wire.Writer().varInt(1), ClientBridge.WELCOME);
-        assertEquals(ClientBridge.PROTOCOL, in.varInt()); assertTrue(in.bool()); assertEquals(16, in.varInt()); in.end();
+        assertEquals(ClientBridge.PROTOCOL, in.varInt()); assertTrue(in.bool()); assertEquals(16, in.varInt()); assertTrue(in.bool()); in.end();
     }
     @Test void catalogListsBlueprintsWithSize() {
         Wire.Reader in = request(ClientBridge.CATALOG_REQUEST, new Wire.Writer(), ClientBridge.CATALOG);
@@ -107,6 +107,19 @@ class ClientBridgeTest {
         Wire.Reader rot = request(ClientBridge.START, new Wire.Writer().utf("orientation-demo").int32(4).int32(65).int32(4).varInt(45).varInt(0), ClientBridge.RESULT);
         assertFalse(rot.bool());
         assertTrue(plugin.builds().jobs().isEmpty());
+    }
+    @Test void captureSavesWithTheCommandsRulesAndRefreshesTheCatalog() {
+        world.getBlockAt(1, 65, 1).setType(Material.STONE);
+        world.getBlockAt(2, 65, 1).setType(Material.OAK_PLANKS);
+        Wire.Reader survival = request(ClientBridge.CAPTURE, new Wire.Writer().utf("hut").int32(1).int32(65).int32(1).int32(2).int32(65).int32(1), ClientBridge.RESULT);
+        assertFalse(survival.bool(), "capture needs Creative");
+        player.setGameMode(GameMode.CREATIVE);
+        Wire.Reader ok = request(ClientBridge.CAPTURE, new Wire.Writer().utf("hut").int32(2).int32(65).int32(1).int32(1).int32(65).int32(1), ClientBridge.RESULT);
+        assertTrue(ok.bool()); assertTrue(ok.utf(1000).contains("hut"));
+        assertTrue(sent.stream().anyMatch(s -> s.channel().equals(ClientBridge.CATALOG)), "catalog pushed");
+        assertEquals(2, repository.get("hut").orElseThrow().blockCount());
+        Wire.Reader dup = request(ClientBridge.CAPTURE, new Wire.Writer().utf("hut").int32(1).int32(65).int32(1).int32(2).int32(65).int32(1), ClientBridge.RESULT);
+        assertFalse(dup.bool(), "no overwrite");
     }
     @Test void floodingIsRateLimited() {
         sent.clear();

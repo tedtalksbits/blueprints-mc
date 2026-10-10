@@ -17,8 +17,8 @@ public final class ClientBridge implements PluginMessageListener {
         PLAN_REQUEST = "blueprints:plan_request", PLAN = "blueprints:plan",
         MATERIALS_REQUEST = "blueprints:materials_request", MATERIALS = "blueprints:materials",
         START = "blueprints:start", CANCEL = "blueprints:cancel", RESULT = "blueprints:result",
-        JOBS_REQUEST = "blueprints:jobs_request", JOBS = "blueprints:jobs";
-    public static final List<String> INCOMING = List.of(HELLO, CATALOG_REQUEST, PLAN_REQUEST, MATERIALS_REQUEST, START, CANCEL, JOBS_REQUEST);
+        JOBS_REQUEST = "blueprints:jobs_request", JOBS = "blueprints:jobs", CAPTURE = "blueprints:capture";
+    public static final List<String> INCOMING = List.of(HELLO, CATALOG_REQUEST, PLAN_REQUEST, MATERIALS_REQUEST, START, CANCEL, JOBS_REQUEST, CAPTURE);
     public static final List<String> OUTGOING = List.of(WELCOME, CATALOG, PLAN, MATERIALS, RESULT, JOBS);
     private static final int MAX_ID = 64, REQUESTS_PER_SECOND = 20;
 
@@ -56,6 +56,12 @@ public final class ClientBridge implements PluginMessageListener {
                 }
                 case CANCEL -> { String job = in.utf(MAX_ID); in.end(); cancel(player, job); }
                 case JOBS_REQUEST -> { in.end(); jobs(player); }
+                case CAPTURE -> {
+                    String id = in.utf(MAX_ID);
+                    int x1 = in.int32(), y1 = in.int32(), z1 = in.int32(), x2 = in.int32(), y2 = in.int32(), z2 = in.int32();
+                    in.end();
+                    capture(player, id, x1, y1, z1, x2, y2, z2);
+                }
                 default -> { }
             }
         } catch (IllegalArgumentException e) {
@@ -72,7 +78,7 @@ public final class ClientBridge implements PluginMessageListener {
 
     private void welcome(Player player) {
         outbox.send(player, WELCOME, new Wire.Writer().varInt(PROTOCOL).bool(player.hasPermission("blueprints.build"))
-            .varInt(starter.chestRadius()).bytes());
+            .varInt(starter.chestRadius()).bool(player.hasPermission("blueprints.capture")).bytes());
     }
 
     private void catalog(Player player) {
@@ -127,6 +133,18 @@ public final class ClientBridge implements PluginMessageListener {
         BuildStarter.Outcome outcome = starter.start(player, id, x, y, z, transform);
         result(player, outcome.ok(), outcome.message());
         if (outcome.ok()) jobs(player);
+    }
+
+    /** Same rules as /blueprint capture: Creative mode, capture permission, supported blocks, size limits. */
+    private void capture(Player player, String id, int x1, int y1, int z1, int x2, int y2, int z2) {
+        try {
+            ConstructionPlan plan = BlueprintCapture.capture(player, id, x1, y1, z1, x2, y2, z2);
+            repository.saveNew(plan);
+            result(player, true, "Saved blueprint " + plan.id() + " (" + plan.blockCount() + " blocks).");
+            catalog(player);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            result(player, false, e.getMessage());
+        }
     }
 
     private void cancel(Player player, String token) {
