@@ -24,7 +24,10 @@ public class BlueprintsPlugin extends JavaPlugin {
         buildersChest.registerRecipe();
         getServer().getPluginManager().registerEvents(buildersChest, this);
         int radius = Math.clamp(getConfig().getInt("builders-chest.search-radius", 16), 1, 64);
-        BlueprintCommand command = new BlueprintCommand(blueprints, buildManager, radius);
+        java.nio.file.Path imports = getDataFolder().toPath().resolve("import");
+        try { java.nio.file.Files.createDirectories(imports); }
+        catch (java.io.IOException e) { throw new IllegalStateException("Could not create " + imports, e); }
+        BlueprintCommand command = new BlueprintCommand(blueprints, buildManager, radius, imports);
         PluginCommand registered = getCommand("blueprint");
         if (registered == null) throw new IllegalStateException("blueprint command missing from plugin.yml");
         registered.setExecutor(command);

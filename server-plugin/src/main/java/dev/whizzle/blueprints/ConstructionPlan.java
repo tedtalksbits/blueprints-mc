@@ -4,6 +4,7 @@ import java.util.*;
 
 /** An immutable, server-validated snapshot. Source file edits cannot change an active job. */
 public record ConstructionPlan(String id, String name, List<ConstructionStep> steps) {
+    public static final int MAX_BLOCKS = 4096, MAX_SPAN = 65;
     public ConstructionPlan {
         Objects.requireNonNull(id);
         Objects.requireNonNull(name);

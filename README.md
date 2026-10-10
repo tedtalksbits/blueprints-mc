@@ -2,7 +2,7 @@
 
 **Design in Creative. Earn it in Survival.**
 
-A Paper 26.2 plugin that builds a small, server-installed blueprint gradually from real materials in a Builder's Chest. This first slice focuses on exact block states and survival accounting; the Fabric client and `.litematic` importer come later.
+A Paper 26.2 plugin that builds a small, server-installed blueprint gradually from real materials in a Builder's Chest. This first slice focuses on exact block states and survival accounting; `.litematic` import is supported; a build preview comes later.
 
 ## Build
 
@@ -66,7 +66,17 @@ This mirrors the design's local X axis, then rotates it 90 degrees clockwise whe
 - Main-thread inventory consumption and placement, with atomic job-file replacement.
 - Normal `/stop` restart recovery, with automatic retries for ordinary pauses.
 - Fail-closed crash recovery: unfinished jobs from an unclean session require inspection and cancellation, never automatic replay.
-- 46 automated tests covering plan validation, materials, construction, persistence, scheduling, failure behavior, and Builder's Chest ownership.
+- 53 automated tests covering plan validation, materials, construction, persistence, scheduling, failure behavior, and Builder's Chest ownership.
+
+## Import a Litematica schematic
+
+Operators (`blueprints.import`) can turn a `.litematic` file into a blueprint:
+
+1. Copy the file into `plugins/Blueprints/import/` (the server can stay running).
+2. Run `/blueprint import <file> [id]`. The `.litematic` extension is optional, and tab completion lists the folder. Without an id, one is made from the file name.
+3. Check `/blueprint materials <id>`, then build it like any other blueprint.
+
+Only block states are imported. Chests' contents, signs' text, entities, and scheduled ticks are ignored. Blocks outside the supported palette (torches, lanterns, flowers, beds, and so on) are **skipped and listed** in the import message, so the build may have gaps where those were. Waterlogged and powered states are switched off. All regions of a multi-region schematic are combined, and the origin is the combined minimum corner. Current limits are 4,096 supported blocks and 65 blocks per side; larger schematics are rejected with their size.
 
 ## Builder's Chest
 
