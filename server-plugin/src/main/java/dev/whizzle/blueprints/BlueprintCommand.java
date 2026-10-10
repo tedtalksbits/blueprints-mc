@@ -1,8 +1,6 @@
 package dev.whizzle.blueprints;
 
-import org.bukkit.Location;
 import org.bukkit.Bukkit;
-import org.bukkit.block.Chest;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 
@@ -15,13 +13,13 @@ import java.util.stream.Stream;
 public final class BlueprintCommand implements CommandExecutor, TabCompleter {
     private final BlueprintRepository repository;
     private final BuildManager builds;
-    private final int chestRadius;
+    private final BuildStarter starter;
     private final Path importDirectory;
 
-    public BlueprintCommand(BlueprintRepository repository, BuildManager builds, int chestRadius, Path importDirectory) {
+    public BlueprintCommand(BlueprintRepository repository, BuildManager builds, BuildStarter starter, Path importDirectory) {
         this.repository = repository;
         this.builds = builds;
-        this.chestRadius = chestRadius;
+        this.starter = starter;
         this.importDirectory = importDirectory.toAbsolutePath().normalize();
     }
 
@@ -132,8 +130,6 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
             case "start" -> {
                 if (!(sender instanceof Player player)) { sender.sendMessage("Players only."); return true; }
                 if (args.length < 5 || args.length > 7) return false;
-                ConstructionPlan def = repository.get(args[1]).orElse(null);
-                if (def == null) { sender.sendMessage("§cUnknown blueprint: " + args[1]); return true; }
                 int x, y, z;
                 try { x = Integer.parseInt(args[2]); y = Integer.parseInt(args[3]); z = Integer.parseInt(args[4]); }
                 catch (NumberFormatException e) { sender.sendMessage("§cCoordinates must be integers."); return true; }
@@ -142,19 +138,8 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
                 try { transform = BlueprintTransform.parse(args.length > 5 ? args[5] : "0", args.length > 6 ? args[6] : "none"); }
                 catch (IllegalArgumentException e) { sender.sendMessage("§c" + e.getMessage()); return true; }
 
-                Chest chest = BuildersChest.nearestOwned(player, chestRadius, c -> !builds.chestReserved(c)).orElse(null);
-                if (chest == null) {
-                    sender.sendMessage("§cNo free Builder's Chest of yours within " + chestRadius + " blocks. Each active build needs its own.");
-                    return true;
-                }
-                try {
-                    ConstructionPlan positioned = PlanTransformer.apply(def, transform);
-                    BuildJob job = builds.start(player, positioned, new Location(player.getWorld(), x, y, z), chest);
-                    sender.sendMessage("§aStarted §f" + def.name() + "§a. Job: §f" + job.id().toString().substring(0, 8));
-                    sender.sendMessage("§7Funded by your Builder's Chest at " + chest.getX() + " " + chest.getY() + " " + chest.getZ() + ".");
-                } catch (IllegalArgumentException | IllegalStateException e) {
-                    sender.sendMessage("§c" + e.getMessage());
-                }
+                BuildStarter.Outcome outcome = starter.start(player, args[1], x, y, z, transform);
+                sender.sendMessage((outcome.ok() ? "§a" : "§c") + outcome.message());
                 return true;
             }
             default -> { return false; }

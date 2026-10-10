@@ -9,6 +9,12 @@ public final class InventoryUtil {
     private static boolean eligible(ItemStack stack, Material material) {
         return stack != null && stack.getType() == material && stack.isSimilar(new ItemStack(material));
     }
+    /** Plain (unrenamed, uncustomized) items of this type that a build could consume. */
+    public static int count(Inventory inventory, Material material) {
+        int found = 0;
+        for (ItemStack stack : inventory.getStorageContents()) if (eligible(stack, material)) found += stack.getAmount();
+        return found;
+    }
     /** Count first; insufficient materials never partially debit the inventory. Named/custom items are excluded. */
     public static boolean consume(Inventory inventory, Material material, int amount) {
         if (amount < 1) throw new IllegalArgumentException("Positive material cost required");

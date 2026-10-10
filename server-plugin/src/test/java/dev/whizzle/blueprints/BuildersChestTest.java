@@ -80,9 +80,9 @@ class BuildersChestTest {
         claimedAt(-5, 65, 0, player);
         claimedAt(-7, 65, 0, player);
         assertTrue(server.dispatchCommand(player, "blueprint start orientation-demo 4 65 4"));
-        String first = player.nextMessage(); player.nextMessage();
+        String first = player.nextMessage();
         assertTrue(server.dispatchCommand(player, "blueprint start orientation-demo 4 65 10"));
-        String second = player.nextMessage(); player.nextMessage();
+        String second = player.nextMessage();
         assertTrue(first.contains("Started") && second.contains("Started"), () -> first + " | " + second);
         List<Integer> chests = plugin.builds().jobs().stream().map(BuildJob::chestX).sorted().toList();
         assertEquals(List.of(-5, -3), chests, () -> "job chests " + chests);

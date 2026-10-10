@@ -25,7 +25,7 @@ public final class SelfTestPlugin extends JavaPlugin {
     private void check(boolean ok, String what) { if (!ok) failures++; report.add((ok ? "PASS " : "FAIL ") + what); }
 
     private void run() {
-        try { palette(); transforms(); placement(); importFiles(); census(); }
+        try { channels(); palette(); transforms(); placement(); importFiles(); census(); }
         catch (Throwable t) { failures++; report.add("FAIL crashed: " + t); getLogger().log(java.util.logging.Level.SEVERE, "self-test crashed", t); }
         report.add(0, "SELFTEST " + (failures == 0 ? "PASSED" : "FAILED (" + failures + ")") + " on " + Bukkit.getVersion());
         try {
@@ -34,6 +34,15 @@ public final class SelfTestPlugin extends JavaPlugin {
         } catch (IOException e) { getLogger().severe("Could not write report: " + e); }
         report.stream().filter(l -> !l.startsWith("PASS")).forEach(l -> getLogger().info(l));
         if (Boolean.getBoolean("blueprints.selftest.exit")) Bukkit.shutdown();
+    }
+
+    /** The client-mod channels must be registered on the real messenger (names are validated by Paper). */
+    private void channels() {
+        var blueprints = Bukkit.getPluginManager().getPlugin("Blueprints");
+        var incoming = Bukkit.getMessenger().getIncomingChannels(blueprints);
+        var outgoing = Bukkit.getMessenger().getOutgoingChannels(blueprints);
+        for (String c : ClientBridge.INCOMING) check(incoming.contains(c), "incoming channel " + c);
+        for (String c : ClientBridge.OUTGOING) check(outgoing.contains(c), "outgoing channel " + c);
     }
 
     static final List<String> SUPPORTED = List.of(
