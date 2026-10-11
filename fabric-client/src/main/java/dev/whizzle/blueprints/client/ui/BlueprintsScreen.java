@@ -74,10 +74,21 @@ public final class BlueprintsScreen extends Screen {
 		int jy = height - 54;
 		for (Messages.Job job : s().jobs) {
 			if (!job.active()) continue;
-			addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> Actions.cancelJob(job.id())).pos(width - 60, jy).size(50, 20).build());
+			addRenderableWidget(Button.builder(Component.literal("Stop build"), b -> confirmCancel(job)).pos(width - 80, jy).size(70, 20).build());
 			jy -= ROW;
 		}
 		seenChange = s().changeCounter;
+	}
+
+	/** Stopping a build is irreversible (placed blocks stay, used items are gone), so ask first. */
+	private void confirmCancel(Messages.Job job) {
+		minecraft.gui.setScreen(new net.minecraft.client.gui.screens.ConfirmScreen(yes -> {
+			if (yes) Actions.cancelJob(job.id());
+			minecraft.gui.setScreen(this);
+		}, Component.literal("Stop building " + job.name() + "?"),
+			Component.literal(job.done() + " of " + job.total() + " steps are done. Placed blocks stay where they are; items already used are not refunded. "
+				+ "Unused items stay in the chest. This can't be undone."),
+			Component.literal("Stop build"), Component.literal("Keep building")));
 	}
 
 	@Override
@@ -114,16 +125,23 @@ public final class BlueprintsScreen extends Screen {
 
 		Messages.Materials m = s.materials;
 		if (m == null || !m.id().equals(e.id())) { g.text(font, "Loading materials...", x, y, Hud.GRAY); return; }
-		g.text(font, m.chestFound() ? "Your Builder's Chest at " + m.chestX() + " " + m.chestY() + " " + m.chestZ()
-			: "No free Builder's Chest of yours nearby. Place one (each build needs its own).", x, y, m.chestFound() ? Hud.GRAY : Hud.RED);
+		if (m.building()) {
+			g.text(font, "Building now: " + m.done() + "/" + m.total() + " steps. Showing what's left and what this build's chest holds.", x, y, Hud.GREEN);
+			y += 12;
+			g.text(font, m.chestFound() ? "This build's Builder's Chest at " + m.chestX() + " " + m.chestY() + " " + m.chestZ()
+				: "This build's chest is missing or its area isn't loaded.", x, y, m.chestFound() ? Hud.GRAY : Hud.RED);
+		} else {
+			g.text(font, m.chestFound() ? "Your Builder's Chest at " + m.chestX() + " " + m.chestY() + " " + m.chestZ()
+				: "No free Builder's Chest of yours nearby. Place one (each build needs its own).", x, y, m.chestFound() ? Hud.GRAY : Hud.RED);
+		}
 		y += 14;
 		int col1 = x, col2 = x + 150, col3 = x + 200, col4 = x + 255;
-		g.text(font, "Material", col1, y, Hud.WHITE); g.text(font, "Needed", col2, y, Hud.WHITE);
+		g.text(font, "Material", col1, y, Hud.WHITE); g.text(font, m.building() ? "Left" : "Needed", col2, y, Hud.WHITE);
 		g.text(font, "In chest", col3, y, Hud.WHITE); g.text(font, "Missing", col4, y, Hud.WHITE);
 		y += 12;
 		List<Messages.Material> rows = new ArrayList<>(m.rows());
 		rows.sort(Comparator.comparingInt(Messages.Material::missing).reversed().thenComparing(Messages.Material::material));
-		int bottom = height - 60 - jobsHeight(s), visible = Math.max(1, (bottom - y) / 11);
+		int bottom = height - 72 - jobsHeight(s), visible = Math.max(1, (bottom - y) / 11);
 		materialScroll = Math.min(materialScroll, Math.max(0, rows.size() - visible));
 		for (int i = materialScroll; i < Math.min(rows.size(), materialScroll + visible); i++) {
 			Messages.Material r = rows.get(i);
@@ -139,9 +157,10 @@ public final class BlueprintsScreen extends Screen {
 		for (Messages.Job job : s.jobs) {
 			if (!job.active()) continue;
 			Hud.Line line = Hud.jobLine(job);
-			g.text(font, font.plainSubstrByWidth(line.text(), width - x - 80), x, jy, line.color());
+			g.text(font, font.plainSubstrByWidth(line.text(), width - x - 100), x, jy, line.color());
 			jy -= ROW;
 		}
+		if (jobsHeight(s) > 0) g.text(font, "Your builds in progress (these are real builds, not previews):", x, jy + ROW - 12, Hud.WHITE);
 		if (s.previewing() && !s.previewId.equals(s.selectedId))
 			g.text(font, "Previewing a different blueprint; \"Preview here\" switches to this one.", x, height - 40 - jobsHeight(s), Hud.GOLD);
 	}

@@ -44,10 +44,12 @@ public final class Hud {
 		out.add(new Line(p.sizeX() + "x" + p.sizeY() + "x" + p.sizeZ() + ", " + p.blockCount() + " blocks at " + p.anchorX() + " " + p.anchorY() + " " + p.anchorZ(), GRAY));
 		Messages.Materials m = s.materials;
 		if (m == null || !m.id().equals(s.previewId)) out.add(new Line("Checking materials...", GRAY));
+		else if (m.building()) out.add(new Line("You're already building this (" + m.done() + "/" + m.total() + "); a second copy needs another chest", GOLD));
 		else if (!m.chestFound()) out.add(new Line("No free Builder's Chest of yours nearby", RED));
 		else if (m.totalMissing() > 0) out.add(new Line(m.totalMissing() + " items still missing from your Builder's Chest", RED));
 		else out.add(new Line("All materials are in your Builder's Chest", GREEN));
 		if (!s.previewVisible) out.add(new Line("Preview hidden", GRAY));
+		if (dev.whizzle.blueprints.client.Compat.shadersOn()) out.add(new Line("Shaders are on and may hide the preview: toggle them (Iris: K) while placing", GOLD));
 		out.add(new Line(keys(Keys.FORWARD, Keys.BACK, Keys.LEFT, Keys.RIGHT) + " move  " + keys(Keys.UP, Keys.DOWN) + " height  " + keys(Keys.HERE) + " to crosshair", WHITE));
 		out.add(new Line(keys(Keys.ROTATE) + " rotate  " + keys(Keys.MIRROR) + " mirror  " + keys(Keys.CONFIRM) + " build  " + keys(Keys.HIDE) + " close  " + keys(Keys.OPEN) + " menu", WHITE));
 	}
@@ -66,7 +68,7 @@ public final class Hud {
 
 	static Line jobLine(Messages.Job job) {
 		boolean paused = job.state().startsWith("PAUSED") || job.state().equals("RECOVERY_REQUIRED");
-		String text = job.name() + "  " + job.done() + "/" + job.total() + (paused ? "  paused: " + job.reason() : "  building");
+		String text = "Building " + job.name() + "  " + job.done() + "/" + job.total() + (paused ? "  paused: " + job.reason() : "");
 		return new Line(text, paused ? GOLD : GREEN);
 	}
 

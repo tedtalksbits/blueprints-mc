@@ -80,13 +80,33 @@ class ClientBridgeTest {
         Chest chest = fundedChest(-2);
         chest.getBlockInventory().addItem(new ItemStack(Material.STONE_BRICKS, 10));
         Wire.Reader in = request(ClientBridge.MATERIALS_REQUEST, new Wire.Writer().utf("orientation-demo"), ClientBridge.MATERIALS);
-        assertEquals("orientation-demo", in.utf(64)); assertTrue(in.bool());
+        assertEquals("orientation-demo", in.utf(64)); assertFalse(in.bool(), "not building"); assertTrue(in.bool());
         assertEquals(-2, in.int32()); assertEquals(65, in.int32()); assertEquals(0, in.int32());
         Map<String, int[]> rows = new HashMap<>();
         for (int i = 0, n = in.varInt(); i < n; i++) rows.put(in.utf(64), new int[]{in.varInt(), in.varInt()});
         in.end();
         assertArrayEquals(new int[]{25, 10}, rows.get("STONE_BRICKS"));
         assertArrayEquals(new int[]{1, 0}, rows.get("OAK_DOOR"));
+    }
+    @Test void whileBuildingMaterialsShowWhatIsLeftAndTheBuildsOwnChest() {
+        Chest chest = fundedChest(-2);
+        chest.getBlockInventory().addItem(new ItemStack(Material.STONE_BRICKS, 5));
+        assertTrue(request(ClientBridge.START, new Wire.Writer().utf("orientation-demo").int32(4).int32(65).int32(4).varInt(0).varInt(0), ClientBridge.RESULT).bool());
+        server.getScheduler().performTicks(60);                    // places the 5 funded bricks, then pauses
+        BuildJob job = plugin.builds().jobs().iterator().next();
+        assertEquals(5, job.nextBlock());
+        chest.getBlockInventory().addItem(new ItemStack(Material.STONE_BRICKS, 3));
+        Wire.Reader in = request(ClientBridge.MATERIALS_REQUEST, new Wire.Writer().utf("orientation-demo"), ClientBridge.MATERIALS);
+        assertEquals("orientation-demo", in.utf(64));
+        assertTrue(in.bool(), "building mode");
+        assertEquals(job.id().toString(), in.utf(64)); assertEquals(5, in.varInt()); assertEquals(37, in.varInt());
+        assertTrue(in.bool(), "the reserved chest is still reported");
+        assertEquals(-2, in.int32()); in.int32(); in.int32();
+        Map<String, int[]> rows = new HashMap<>();
+        for (int i = 0, n = in.varInt(); i < n; i++) rows.put(in.utf(64), new int[]{in.varInt(), in.varInt()});
+        in.end();
+        assertArrayEquals(new int[]{20, 3}, rows.get("STONE_BRICKS")); // 25 total - 5 placed; 3 waiting in the chest
+        assertArrayEquals(new int[]{4, 0}, rows.get("OAK_STAIRS"));
     }
     @Test void startUsesTheSameChecksAsTheCommandAndReportsJobs() {
         Wire.Reader fail = request(ClientBridge.START, new Wire.Writer().utf("orientation-demo").int32(4).int32(65).int32(4).varInt(90).varInt(1), ClientBridge.RESULT);

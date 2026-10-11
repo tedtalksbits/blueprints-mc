@@ -16,8 +16,10 @@ class MessagesTest {
 		var plan = Messages.plan(new Wire.Writer().utf("cabin").utf("Cabin").varInt(2).utf("minecraft:stone").utf("minecraft:oak_log[axis=x]")
 			.varInt(2).varInt(0).varInt(0).varInt(0).varInt(0).varInt(1).varInt(0).varInt(0).varInt(1).bytes());
 		assertEquals(2, plan.blocks().size()); assertEquals("minecraft:oak_log[axis=x]", plan.palette().get(plan.blocks().get(1).state()));
-		var mats = Messages.materials(new Wire.Writer().utf("cabin").bool(true).int32(-3).int32(64).int32(9).varInt(1).utf("STONE").varInt(10).varInt(4).bytes());
-		assertTrue(mats.chestFound()); assertEquals(-3, mats.chestX()); assertEquals(6, mats.totalMissing());
+		var mats = Messages.materials(new Wire.Writer().utf("cabin").bool(false).bool(true).int32(-3).int32(64).int32(9).varInt(1).utf("STONE").varInt(10).varInt(4).bytes());
+		assertFalse(mats.building()); assertTrue(mats.chestFound()); assertEquals(-3, mats.chestX()); assertEquals(6, mats.totalMissing());
+		var building = Messages.materials(new Wire.Writer().utf("cabin").bool(true).utf("job-1").varInt(5).varInt(37).bool(false).varInt(0).bytes());
+		assertTrue(building.building()); assertEquals("job-1", building.jobId()); assertEquals(5, building.done()); assertFalse(building.chestFound());
 		assertEquals(new Messages.Result(false, "nope"), Messages.result(new Wire.Writer().bool(false).utf("nope").bytes()));
 		var jobs = Messages.jobs(new Wire.Writer().varInt(1).utf("uuid").utf("cabin").utf("Cabin").varInt(3).varInt(10).utf("PAUSED_MATERIALS")
 			.utf("Missing 1 STONE").int32(1).int32(2).int32(-3).bytes());

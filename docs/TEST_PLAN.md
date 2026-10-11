@@ -22,9 +22,9 @@ What this covers: the full loop with the Fabric client. You design in Creative, 
 | 4 | Arrow keys, **Page Up/Down**, **G**, **R**, **M** | Moves away/closer/left/right relative to where you face (hold to repeat), up/down, jumps to the crosshair, rotates in place, mirrors. Stairs, doors and slabs visibly face the right way. |
 | 5 | `/blueprint givechest`, place it within 16 blocks. Open **B** | "Your Builder's Chest at ...". The materials table shows Needed / In chest / Missing. Put some items in; the numbers update within about a second. |
 | 6 | Fill the chest, preview where you want it, press **Enter** | "Started ..." message. The panel shows progress; blocks appear bottom-up and vanish from the preview as they are placed correctly. The final build matches the preview exactly. |
-| 7 | Start another build with too few materials | It pauses; the panel says why ("paused: Missing 3 COBBLESTONE"). Add the items; it continues. |
+| 7 | Start another build with too few materials, then open **B** and select that blueprint | It pauses; the panel says why ("paused: Missing 3 COBBLESTONE"). The menu switches to **Building now: N/M** and shows what's **left** and what *that build's* chest holds. Add items; the numbers update within a second and the build continues. |
 | 8 | Preview over an existing block (place dirt where the preview has a block) | That spot is drawn red. |
-| 9 | **B →** your build's **Cancel** | It stops; placed blocks stay; unused items remain in the chest. |
+| 9 | **B →** under "Your builds in progress", **Stop build** | A confirmation explains what happens. **Keep building** changes nothing; **Stop build** stops it, placed blocks stay, unused items remain in the chest. |
 | 10 | Put a `.litematic` in `%APPDATA%\.minecraft\schematics\` (or any subfolder). **B → Upload .litematic...**, pick it, keep or change the name, **Upload** | "Uploaded <name> (N blocks)", plus a list of anything skipped. It appears in the menu; preview and build it. Your tower uploads 894 of 895 blocks (only the campfire is skipped). |
 | 11 | Stop the server, set `limits.max-span: 10` in `plugins\Blueprints\config.yml`, start, try uploading the tower again under a new name | Refused: "Schematic is 12x18x16; the current limit is 10 blocks per side". Set it back to 65 afterwards. |
 
@@ -33,6 +33,8 @@ What this covers: the full loop with the Fabric client. You design in Creative, 
 Screenshots of anything that looks wrong, plus anything that felt clunky: key choices, panel size, opacity, colors, how placement in front of you feels.
 
 ## ⚠️ Known limits and decisions for you
+
+0. **Shader packs (Iris) can hide the preview.** The panel warns when shaders are on; toggle them (Iris: `K`) while placing.
 
 1. **The preview shows each block's shape in its map color, not real textures.** Orientation is clear (stairs, slabs, doors, fences, walls show their shape). Real textured, see-through models are possible and would be the next client step.
 2. **Size limits are now in `config.yml`** (`limits.max-blocks`, `limits.max-span`, `uploads.max-kilobytes`), with hard ceilings of 32,768 blocks and 128 per side.

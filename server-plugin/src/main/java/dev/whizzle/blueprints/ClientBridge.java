@@ -130,17 +130,38 @@ public final class ClientBridge implements PluginMessageListener {
         outbox.send(player, PLAN, out.bytes());
     }
 
-    /** What the build needs, and what the player's nearest free Builder's Chest currently holds. */
+    /**
+     * Materials for a blueprint. If the player is already building it, this reports that build: what is still left
+     * to place and what the build's own (reserved) chest holds. Otherwise it reports the whole blueprint against the
+     * player's nearest free Builder's Chest.
+     */
     private void materials(Player player, String id) {
         ConstructionPlan plan = repository.get(id).orElse(null);
         if (plan == null) { result(player, false, "Unknown blueprint: " + id); return; }
-        Chest chest = starter.freeChest(player).orElse(null);
-        Wire.Writer out = new Wire.Writer().utf(plan.id()).bool(chest != null);
+        BuildJob job = builds.jobs().stream().filter(j -> !j.terminal() && j.owner().equals(player.getUniqueId())
+            && j.blueprintId().equalsIgnoreCase(plan.id())).findFirst().orElse(null);
+        Map<String, Integer> needed;
+        Chest chest;
+        Wire.Writer out = new Wire.Writer().utf(plan.id()).bool(job != null);
+        if (job != null) {
+            out.utf(job.id().toString()).varInt(job.nextBlock()).varInt(job.plan().steps().size());
+            needed = new TreeMap<>();
+            for (ConstructionStep step : job.plan().steps().subList(job.nextBlock(), job.plan().steps().size()))
+                needed.merge(step.material(), step.amount(), Integer::sum);
+            org.bukkit.World world = org.bukkit.Bukkit.getWorld(job.world());
+            chest = world != null && world.isChunkLoaded(job.chestX() >> 4, job.chestZ() >> 4)
+                && world.getBlockAt(job.chestX(), job.chestY(), job.chestZ()).getState() instanceof Chest c ? c : null;
+        } else {
+            needed = plan.materials();
+            chest = starter.freeChest(player).orElse(null);
+        }
+        out.bool(chest != null);
         if (chest != null) out.int32(chest.getX()).int32(chest.getY()).int32(chest.getZ());
-        out.varInt(plan.materials().size());
-        plan.materials().forEach((material, needed) -> {
-            int have = chest == null ? 0 : InventoryUtil.count(chest.getBlockInventory(), org.bukkit.Material.valueOf(material));
-            out.utf(material).varInt(needed).varInt(have);
+        out.varInt(needed.size());
+        Chest source = chest;
+        needed.forEach((material, count) -> {
+            int have = source == null ? 0 : InventoryUtil.count(source.getBlockInventory(), org.bukkit.Material.valueOf(material));
+            out.utf(material).varInt(count).varInt(have);
         });
         outbox.send(player, MATERIALS, out.bytes());
     }

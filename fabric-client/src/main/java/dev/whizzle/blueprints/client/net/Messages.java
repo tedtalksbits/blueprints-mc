@@ -24,7 +24,9 @@ public final class Messages {
 	public record Material(String material, int needed, int inChest) {
 		public int missing() { return Math.max(0, needed - inChest); }
 	}
-	public record Materials(String id, boolean chestFound, int chestX, int chestY, int chestZ, List<Material> rows) {
+	/** {@code building}: rows are what's left for the player's build of this blueprint, against that build's chest. */
+	public record Materials(String id, boolean building, String jobId, int done, int total,
+	                        boolean chestFound, int chestX, int chestY, int chestZ, List<Material> rows) {
 		public int totalMissing() { return rows.stream().mapToInt(Material::missing).sum(); }
 	}
 	public record Result(boolean ok, String message) {}
@@ -61,13 +63,16 @@ public final class Messages {
 	public static Materials materials(byte[] data) {
 		Wire.Reader in = new Wire.Reader(data);
 		String id = in.utf();
+		boolean building = in.bool();
+		String jobId = ""; int done = 0, total = 0;
+		if (building) { jobId = in.utf(); done = in.varInt(); total = in.varInt(); }
 		boolean found = in.bool();
 		int x = 0, y = 0, z = 0;
 		if (found) { x = in.int32(); y = in.int32(); z = in.int32(); }
 		int n = in.count(MAX);
 		List<Material> rows = new ArrayList<>(n);
 		for (int i = 0; i < n; i++) rows.add(new Material(in.utf(), in.varInt(), in.varInt()));
-		return new Materials(id, found, x, y, z, rows);
+		return new Materials(id, building, jobId, done, total, found, x, y, z, rows);
 	}
 
 	public static Result result(byte[] data) { Wire.Reader in = new Wire.Reader(data); return new Result(in.bool(), in.utf()); }

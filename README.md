@@ -66,7 +66,7 @@ This mirrors the design's local X axis, then rotates it 90 degrees clockwise whe
 - Main-thread inventory consumption and placement, with atomic job-file replacement.
 - Normal `/stop` restart recovery, with automatic retries for ordinary pauses.
 - Fail-closed crash recovery: unfinished jobs from an unclean session require inspection and cancellation, never automatic replay.
-- 76 plugin tests and 12 client tests, plus a real-Paper self-test plugin (`paper-selftest`, development only), covering plan validation, materials, construction, persistence, scheduling, failure behavior, and Builder's Chest ownership.
+- 77 plugin tests and 12 client tests, plus a real-Paper self-test plugin (`paper-selftest`, development only), covering plan validation, materials, construction, persistence, scheduling, failure behavior, and Builder's Chest ownership.
 
 ## Fabric client (preview and place)
 
@@ -86,7 +86,7 @@ Install: Fabric Loader for 26.2, plus `fabric-api-0.161.0+26.2.jar` and `bluepri
 
 **Upload .litematic...** lists files in your `.minecraft/schematics` folder (where Litematica saves; subfolders included). Pick one, name it, upload; the server imports it with the same rules as `/blueprint import` (needs `blueprints.upload`, op by default; size limit `uploads.max-kilobytes`).
 
-Preview keys only act while a preview is shown, and the on-screen panel always lists the current bindings. The preview draws each block's real shape (stairs, slabs, doors, walls, fences show their orientation) in its map color; blocks already built correctly disappear, and anything in the way is drawn red. While builds run, the panel shows progress and why a build is paused.
+Preview keys only act while a preview is shown, and the on-screen panel always lists the current bindings. The preview draws each block's real shape (stairs, slabs, doors, walls, fences show their orientation) in its map color; blocks already built correctly disappear, and anything in the way is drawn red. While builds run, the panel shows progress and why a build is paused; selecting a blueprint you are building shows what's left against that build's own chest. Stopping a build asks for confirmation. Shader packs (Iris) can hide the preview; the panel says so, and toggling shaders while placing works around it.
 
 Build the client separately (it needs a newer Gradle than the plugin): `cd fabric-client` then `gradlew build`. The wire protocol is in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 

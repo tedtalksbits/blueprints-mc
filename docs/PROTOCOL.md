@@ -16,7 +16,7 @@ Encoding matches Minecraft's `FriendlyByteBuf`: **VarInt**, **Int** (4 bytes, bi
 | `blueprints:plan_request` | C→S | String id |
 | `blueprints:plan` | S→C | String id, String name, VarInt paletteSize, paletteSize × String blockState, VarInt n, n × (VarInt x, y, z, VarInt paletteIndex) |
 | `blueprints:materials_request` | C→S | String id |
-| `blueprints:materials` | S→C | String id, Bool chestFound, [Int x, y, z if found], VarInt n, n × (String material, VarInt needed, VarInt inChest) |
+| `blueprints:materials` | S→C | String id, Bool building, [String jobId, VarInt done, VarInt total if building], Bool chestFound, [Int x, y, z if found], VarInt n, n × (String material, VarInt needed, VarInt inChest) |
 | `blueprints:start` | C→S | String id, Int originX, originY, originZ, VarInt rotation (0/90/180/270), VarInt mirror (0 none, 1 x, 2 z) |
 | `blueprints:cancel` | C→S | String jobId (full UUID or unique prefix) |
 | `blueprints:result` | S→C | Bool ok, String message |
@@ -30,6 +30,8 @@ Encoding matches Minecraft's `FriendlyByteBuf`: **VarInt**, **Int** (4 bytes, bi
 
 ## Semantics
 
+- `materials`: if the player has an unfinished build of that blueprint, it describes that build (materials still to
+  place, and the build's own reserved chest); otherwise the whole blueprint against the nearest free Builder's Chest.
 - Plan coordinates are local and non-negative; the origin is the blueprint's minimum corner.
 - Transforms match `/blueprint start`: mirror first (`x` negates local X, `z` negates local Z), then rotate
   clockwise seen from above. The origin stays fixed, so a transformed build can extend into negative offsets. The
