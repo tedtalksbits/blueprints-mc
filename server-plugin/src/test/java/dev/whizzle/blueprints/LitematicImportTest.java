@@ -106,12 +106,12 @@ class LitematicImportTest {
         assertEquals(Set.of("0,0,0", "1,0,0", "4,2,0"), byPosition(plan).keySet());
     }
     @Test void unsupportedBlocksAreSkippedAndWaterloggedStatesNormalized() throws Exception {
-        var palette = List.of(state("minecraft:air"), state("minecraft:campfire"), state("minecraft:not_a_real_block"),
+        var palette = List.of(state("minecraft:air"), state("minecraft:chest"), state("minecraft:not_a_real_block"),
             state("minecraft:oak_stairs", "facing", "east", "half", "bottom", "shape", "straight", "waterlogged", "true"),
             state("minecraft:stone"));
         var result = LitematicImport.read(write("mixed.litematic", litematic("Mixed", Map.of("r",
             region(new int[]{0, 0, 0}, new int[]{4, 1, 1}, palette, new int[]{1, 2, 3, 4})))), "mixed");
-        assertEquals(Map.of("minecraft:campfire", 1, "minecraft:not_a_real_block", 1), result.skipped());
+        assertEquals(Map.of("minecraft:chest", 1, "minecraft:not_a_real_block", 1), result.skipped());
         assertEquals(1, result.normalized());
         // The two skipped blocks at x=0..1 leave the stairs as the new minimum corner.
         assertEquals("minecraft:oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]", byPosition(result.plan()).get("0,0,0"));
@@ -130,14 +130,14 @@ class LitematicImportTest {
         assertThrows(IOException.class, () -> LitematicImport.read(file, "junk"));
     }
     @Test void importCommandSavesBlueprintAndRejectsPathTricks() throws Exception {
-        var palette = List.of(state("minecraft:air"), state("minecraft:stone"), state("minecraft:campfire"));
+        var palette = List.of(state("minecraft:air"), state("minecraft:stone"), state("minecraft:chest"));
         write("My House.v2.litematic".replace(" ", "_"), litematic("My House", Map.of("r", region(new int[]{0, 0, 0}, new int[]{2, 1, 1}, palette, new int[]{1, 2}))));
         assertTrue(server.dispatchCommand(player, "blueprint import ../../plugins/x"));
         assertTrue(player.nextMessage().contains("plain file name"));
         assertTrue(server.dispatchCommand(player, "blueprint import My_House.v2"));
         String first = player.nextMessage(), second = player.nextMessage();
         assertTrue(first.contains("Imported my_house-v2"), first);
-        assertTrue(second.contains("Skipped 1") && second.contains("campfire"), second);
+        assertTrue(second.contains("Skipped 1") && second.contains("chest"), second);
         BlueprintRepository fresh = new BlueprintRepository(plugin); fresh.load();
         assertEquals(1, fresh.get("my_house-v2").orElseThrow().blockCount());
         assertTrue(player.nextMessage().contains("/blueprint materials"));

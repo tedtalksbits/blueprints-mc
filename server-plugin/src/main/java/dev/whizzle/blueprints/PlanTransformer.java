@@ -6,6 +6,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.MultipleFacing;
+import org.bukkit.block.data.Rotatable;
 import org.bukkit.block.data.type.Wall;
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -29,6 +30,19 @@ public final class PlanTransformer {
         for (BlockFace candidate : AXES)
             if (candidate.getModX() == d.x() && candidate.getModY() == d.y() && candidate.getModZ() == d.z()) return candidate;
         throw new IllegalArgumentException("Unsupported transformed face: " + face);
+    }
+
+    /** Minecraft's 16 sign directions, index 0 = south, increasing clockwise seen from above. */
+    private static final BlockFace[] SIXTEEN = {BlockFace.SOUTH, BlockFace.SOUTH_SOUTH_WEST, BlockFace.SOUTH_WEST, BlockFace.WEST_SOUTH_WEST,
+        BlockFace.WEST, BlockFace.WEST_NORTH_WEST, BlockFace.NORTH_WEST, BlockFace.NORTH_NORTH_WEST, BlockFace.NORTH, BlockFace.NORTH_NORTH_EAST,
+        BlockFace.NORTH_EAST, BlockFace.EAST_NORTH_EAST, BlockFace.EAST, BlockFace.EAST_SOUTH_EAST, BlockFace.SOUTH_EAST, BlockFace.SOUTH_SOUTH_EAST};
+
+    static BlockFace turn16(BlockFace face, BlueprintTransform transform) {
+        int index = java.util.Arrays.asList(SIXTEEN).indexOf(face);
+        if (index < 0) throw new IllegalArgumentException("Unsupported rotation: " + face);
+        if (transform.mirror() == BlueprintTransform.Mirror.X) index = Math.floorMod(-index, 16);      // east <-> west
+        if (transform.mirror() == BlueprintTransform.Mirror.Z) index = Math.floorMod(8 - index, 16);   // north <-> south
+        return SIXTEEN[Math.floorMod(index + transform.rotation() / 90 * 4, 16)];
     }
 
     public static ConstructionPlan apply(ConstructionPlan plan, BlueprintTransform transform) {
@@ -57,6 +71,8 @@ public final class PlanTransformer {
                 for (BlockFace face : SIDES) heights.put(face, wall.getHeight(face));
                 for (BlockFace face : SIDES) wall.setHeight(turn(face, transform), heights.get(face));
             }
+            // Standing and ceiling-hanging signs face one of 16 directions.
+            if (data instanceof Rotatable rotatable) rotatable.setRotation(turn16(rotatable.getRotation(), transform));
             if (data instanceof Orientable orientable && transform.rotation() % 180 != 0) {
                 orientable.setAxis(switch (orientable.getAxis()) { case X -> Axis.Z; case Z -> Axis.X; case Y -> Axis.Y; });
             }

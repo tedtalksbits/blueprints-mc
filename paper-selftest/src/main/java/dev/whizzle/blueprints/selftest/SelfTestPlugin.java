@@ -63,9 +63,12 @@ public final class SelfTestPlugin extends JavaPlugin {
         "minecraft:white_glazed_terracotta[facing=south]", "minecraft:sand", "minecraft:ladder[facing=east,waterlogged=false]",
         "minecraft:oak_button[face=wall,facing=north,powered=false]", "minecraft:lever[face=floor,facing=west,powered=false]",
         "minecraft:stone_pressure_plate[powered=false]", "minecraft:end_rod[facing=up]", "minecraft:copper_grate[waterlogged=false]",
-        "minecraft:anvil[facing=east]", "minecraft:flower_pot", "minecraft:respawn_anchor[charges=0]", "minecraft:composter[level=0]", "minecraft:spruce_trapdoor[facing=east,half=top,open=false,powered=false,waterlogged=false]");
-    static final List<String> UNSUPPORTED = List.of("minecraft:chest", "minecraft:campfire", "minecraft:spawner",
-        "minecraft:oak_sign", "minecraft:command_block", "minecraft:white_bed", "minecraft:furnace", "minecraft:bedrock",
+        "minecraft:anvil[facing=east]", "minecraft:flower_pot", "minecraft:campfire[facing=west,lit=true,signal_fire=false,waterlogged=false]",
+        "minecraft:soul_campfire[facing=north,lit=false,signal_fire=true,waterlogged=false]", "minecraft:barrel[facing=up,open=false]",
+        "minecraft:oak_sign[rotation=3,waterlogged=false]", "minecraft:oak_wall_sign[facing=east,waterlogged=false]",
+        "minecraft:spruce_hanging_sign[attached=false,rotation=6,waterlogged=false]", "minecraft:spruce_wall_hanging_sign[facing=south,waterlogged=false]", "minecraft:respawn_anchor[charges=0]", "minecraft:composter[level=0]", "minecraft:spruce_trapdoor[facing=east,half=top,open=false,powered=false,waterlogged=false]");
+    static final List<String> UNSUPPORTED = List.of("minecraft:chest", "minecraft:hopper", "minecraft:spawner",
+        "minecraft:white_banner", "minecraft:command_block", "minecraft:white_bed", "minecraft:furnace", "minecraft:bedrock",
         "minecraft:redstone_wire", "minecraft:piston[extended=true]", "minecraft:respawn_anchor[charges=4]", "minecraft:composter[level=8]", "minecraft:oak_leaves[persistent=false]");
 
     private void palette() {
@@ -103,6 +106,11 @@ public final class SelfTestPlugin extends JavaPlugin {
         expect("minecraft:glass_pane[east=false,north=true,south=false,waterlogged=false,west=true]", "90", "none",
             "minecraft:glass_pane[east=true,north=true,south=false,waterlogged=false,west=false]");
         expect("minecraft:wall_torch[facing=west]", "90", "none", "minecraft:wall_torch[facing=north]");
+        expect("minecraft:oak_sign[rotation=3,waterlogged=false]", "90", "none", "minecraft:oak_sign[rotation=7,waterlogged=false]");
+        expect("minecraft:oak_sign[rotation=3,waterlogged=false]", "0", "x", "minecraft:oak_sign[rotation=13,waterlogged=false]");
+        expect("minecraft:campfire[facing=west,lit=true,signal_fire=false,waterlogged=false]", "90", "none", "minecraft:campfire[facing=north,lit=true,signal_fire=false,waterlogged=false]");
+        check(MaterialCost.normalize(Bukkit.createBlockData("minecraft:barrel[open=true]")).getAsString().contains("open=false"), "barrels are placed closed");
+        check(MaterialCost.item(Bukkit.createBlockData("minecraft:oak_wall_sign")) == Material.OAK_SIGN, "wall sign is paid with OAK_SIGN");
         expect("minecraft:iron_chain[axis=x,waterlogged=false]", "90", "none", "minecraft:iron_chain[axis=z,waterlogged=false]");
         expect("minecraft:brown_mushroom_block[down=false,east=true,north=true,south=false,up=true,west=false]", "180", "none",
             "minecraft:brown_mushroom_block[down=false,east=false,north=false,south=true,up=true,west=true]");

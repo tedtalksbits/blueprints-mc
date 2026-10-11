@@ -28,8 +28,25 @@ class PaletteTest {
             assertNull(MaterialCost.unsupportedReason(Bukkit.createBlockData("minecraft:" + data)), data);
     }
     @Test void blockEntitiesAndTechnicalBlocksAreRefusedWithAReason() {
-        for (String data : List.of("chest", "barrel", "furnace", "oak_sign", "campfire", "spawner", "command_block", "bedrock", "barrier"))
+        for (String data : List.of("chest", "furnace", "hopper", "white_bed", "white_banner", "spawner", "command_block", "bedrock", "barrier"))
             assertNotNull(MaterialCost.unsupportedReason(Bukkit.createBlockData("minecraft:" + data)), data);
+    }
+    @Test void campfiresBarrelsAndSignsArePlacedEmpty() {
+        for (String data : List.of("campfire", "soul_campfire", "barrel[facing=up]", "oak_sign", "oak_wall_sign", "spruce_hanging_sign", "spruce_wall_hanging_sign"))
+            assertNull(MaterialCost.unsupportedReason(Bukkit.createBlockData("minecraft:" + data)), data);
+        assertEquals(Map.of("OAK_SIGN", 1), plan(at(0, 0, 0, "minecraft:oak_wall_sign")).materials());   // paid with the sign item
+    }
+    @Test void signDirectionsRotateAndMirror() {
+        BlueprintTransform r90 = new BlueprintTransform(90, BlueprintTransform.Mirror.NONE), mx = new BlueprintTransform(0, BlueprintTransform.Mirror.X);
+        assertEquals(org.bukkit.block.BlockFace.WEST, PlanTransformer.turn16(org.bukkit.block.BlockFace.SOUTH, r90));
+        assertEquals(org.bukkit.block.BlockFace.SOUTH_SOUTH_EAST, PlanTransformer.turn16(org.bukkit.block.BlockFace.EAST_NORTH_EAST, r90)); // east->south, north->east
+        assertEquals(org.bukkit.block.BlockFace.WEST_NORTH_WEST, PlanTransformer.turn16(org.bukkit.block.BlockFace.EAST_NORTH_EAST, mx));
+        assertEquals(org.bukkit.block.BlockFace.SOUTH, PlanTransformer.turn16(org.bukkit.block.BlockFace.SOUTH, mx));
+        for (var face : new org.bukkit.block.BlockFace[]{org.bukkit.block.BlockFace.SOUTH_WEST, org.bukkit.block.BlockFace.NORTH_NORTH_EAST}) {
+            var f = face;
+            for (int i = 0; i < 4; i++) f = PlanTransformer.turn16(f, r90);
+            assertEquals(face, f);
+        }
     }
     @Test void wallTorchIsPaidWithATorch() {
         ConstructionPlan p = plan(at(0, 0, 0, "minecraft:wall_torch[facing=east]"));

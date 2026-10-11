@@ -42,6 +42,15 @@ public final class MaterialCost {
         "COMMAND_BLOCK", "CHAIN_COMMAND_BLOCK", "REPEATING_COMMAND_BLOCK", "SPAWNER", "TRIAL_SPAWNER", "VAULT",
         "JIGSAW", "STRUCTURE_BLOCK", "TEST_BLOCK", "TEST_INSTANCE_BLOCK", "BUDDING_AMETHYST");
 
+    /**
+     * Blocks that hold items or data but are common building pieces. They are always placed EMPTY in their default
+     * state: contents, cooking slots, and sign text are never read from a capture or schematic, so nothing can be
+     * duplicated. Add more here as players ask (and review their transform behavior in PlanTransformer).
+     */
+    private static boolean placedEmpty(String name) {
+        return name.equals("CAMPFIRE") || name.equals("SOUL_CAMPFIRE") || name.equals("BARREL") || name.endsWith("_SIGN");
+    }
+
     private MaterialCost() {}
 
     public static int amount(BlockData data) {
@@ -70,7 +79,8 @@ public final class MaterialCost {
         String name = material.name();
         if (DENY.contains(name) || name.startsWith("INFESTED_")) return "not obtainable or unsafe";
         if (!item(data).isItem()) return "has no item";
-        if (hasBlockEntity(data)) return "stores contents or data";
+        boolean empty = placedEmpty(name);
+        if (!empty && hasBlockEntity(data)) return "stores contents or data";
         if (data instanceof Waterlogged w && w.isWaterlogged()) return "waterlogged";
         if (data instanceof Powerable p && p.isPowered()) return "powered";
         if (data instanceof Piston piston && piston.isExtended()) return "extended piston";
@@ -78,7 +88,7 @@ public final class MaterialCost {
         // Stored value would be free materials: a charged anchor holds glowstone, a full composter yields bone meal.
         if (data instanceof RespawnAnchor anchor && anchor.getCharges() > 0) return "charged";
         if (data instanceof Levelled levelled && material == Material.COMPOSTER && levelled.getLevel() > 0) return "filled composter";
-        boolean family = NAMED.contains(name) || PLANTS.contains(name)
+        boolean family = empty || NAMED.contains(name) || PLANTS.contains(name)
             || name.endsWith("_PLANKS") || name.endsWith("_LOG") || name.endsWith("_WOOD") || name.endsWith("_STEM")
             || name.endsWith("_HYPHAE") || name.endsWith("_WOOL") || name.endsWith("_CONCRETE") || name.endsWith("_CONCRETE_POWDER")
             || name.endsWith("_GLASS") || name.endsWith("_GLASS_PANE") || name.endsWith("_TERRACOTTA") || name.endsWith("_CARPET")
@@ -98,6 +108,7 @@ public final class MaterialCost {
         if (data instanceof Leaves leaves && !leaves.isPersistent()) leaves.setPersistent(true);
         if (data instanceof RespawnAnchor anchor) anchor.setCharges(0);
         if (data instanceof Levelled levelled && data.getMaterial() == Material.COMPOSTER) levelled.setLevel(0);
+        if (data instanceof Barrel barrel && barrel.isOpen()) barrel.setOpen(false);   // "open" only means someone is looking inside
         return data;
     }
 

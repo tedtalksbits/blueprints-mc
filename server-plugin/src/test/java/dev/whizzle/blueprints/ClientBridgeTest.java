@@ -144,7 +144,7 @@ class ClientBridgeTest {
         assertFalse(dup.bool(), "no overwrite");
     }
     static byte[] gzipLitematic(int stoneCount) throws Exception {
-        var palette = java.util.List.of(LitematicImportTest.state("minecraft:air"), LitematicImportTest.state("minecraft:stone"), LitematicImportTest.state("minecraft:campfire"));
+        var palette = java.util.List.of(LitematicImportTest.state("minecraft:air"), LitematicImportTest.state("minecraft:stone"), LitematicImportTest.state("minecraft:chest"));
         int[] values = new int[stoneCount + 1]; java.util.Arrays.fill(values, 1); values[stoneCount] = 2;
         var root = LitematicImportTest.litematic("Uploaded", java.util.Map.of("r", LitematicImportTest.region(new int[]{0, 0, 0}, new int[]{stoneCount + 1, 1, 1}, palette, values)));
         var bytes = new java.io.ByteArrayOutputStream();
@@ -164,7 +164,7 @@ class ClientBridgeTest {
         sendChunks(file, 100);                                       // many small chunks, beyond the request budget
         Wire.Reader done = request(ClientBridge.UPLOAD_END, new Wire.Writer(), ClientBridge.RESULT);
         assertTrue(done.bool()); String message = done.utf(10000);
-        assertTrue(message.contains("40 blocks") && message.contains("campfire"), message);
+        assertTrue(message.contains("40 blocks") && message.contains("chest"), message);
         assertTrue(sent.stream().anyMatch(x -> x.channel().equals(ClientBridge.CATALOG)));
         BlueprintRepository fresh = new BlueprintRepository(plugin); fresh.load();
         assertEquals(40, fresh.get("uploaded").orElseThrow().blockCount());

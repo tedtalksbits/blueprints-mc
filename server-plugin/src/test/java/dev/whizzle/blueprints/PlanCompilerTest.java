@@ -29,7 +29,7 @@ class PlanCompilerTest {
         assertThrows(IllegalArgumentException.class, () -> compile(lower, upper));
     }
     @Test void unsupportedAndUnsafeBlocksRejected() {
-        for (String data : List.of("chest", "command_block", "spawner", "water", "redstone_wire", "piston[extended=true]", "oak_slab[waterlogged=true]", "oak_trapdoor[powered=true]", "air", "bedrock", "barrier", "furnace", "campfire", "oak_sign", "oak_leaves[persistent=false]"))
+        for (String data : List.of("chest", "command_block", "spawner", "water", "redstone_wire", "piston[extended=true]", "oak_slab[waterlogged=true]", "oak_trapdoor[powered=true]", "air", "bedrock", "barrier", "furnace", "hopper", "white_bed", "oak_leaves[persistent=false]"))
             assertThrows(IllegalArgumentException.class, () -> compile(block(0, 0, data)), data);
     }
     @Test void duplicatesAndOutOfBoundsRejected() {
