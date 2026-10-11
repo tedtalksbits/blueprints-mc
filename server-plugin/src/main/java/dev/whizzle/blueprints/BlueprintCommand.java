@@ -15,8 +15,14 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
     private final BuildManager builds;
     private final BuildStarter starter;
     private final Path importDirectory;
+    private final BlueprintPolicy policy;
 
     public BlueprintCommand(BlueprintRepository repository, BuildManager builds, BuildStarter starter, Path importDirectory) {
+        this(repository, builds, starter, importDirectory, BlueprintPolicy.DEFAULT);
+    }
+
+    public BlueprintCommand(BlueprintRepository repository, BuildManager builds, BuildStarter starter, Path importDirectory, BlueprintPolicy policy) {
+        this.policy = policy;
         this.repository = repository;
         this.builds = builds;
         this.starter = starter;
@@ -31,6 +37,7 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage("§e/blueprint capture <id> <x1> <y1> <z1> <x2> <y2> <z2> §7(Creative)");
             sender.sendMessage("§e/blueprint materials <id>");
             if (sender.hasPermission("blueprints.import")) sender.sendMessage("§e/blueprint import <file> [id] §7(.litematic in plugins/Blueprints/import)");
+            sender.sendMessage("§e/blueprint delete <id> §7(your own blueprints; operators: any)");
             sender.sendMessage("§e/blueprint status");
             sender.sendMessage("§e/blueprint cancel <job-id>");
             if (sender.hasPermission("blueprints.admin")) sender.sendMessage("§e/blueprint givechest [player]");
@@ -51,7 +58,7 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
                     BlueprintRepository.validateId(id);
                     if (repository.get(id).isPresent()) { sender.sendMessage("§cBlueprint already exists: " + id + ". Pass a different id."); return true; }
                     LitematicImport.Result result = LitematicImport.read(file, id);
-                    repository.saveNew(result.plan());
+                    repository.saveNew(result.plan(), sender instanceof Player p ? BlueprintPolicy.ownerOf(p) : null);
                     ConstructionPlan plan = result.plan();
                     sender.sendMessage("§aImported " + plan.id() + " §7(" + plan.name() + ")§a: " + plan.blockCount() + " blocks.");
                     String notes = LitematicImport.notes(result);
@@ -73,21 +80,35 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
             case "capture" -> {
                 if (!(sender instanceof Player player)) { sender.sendMessage("Players only."); return true; }
                 if (args.length != 8) { sender.sendMessage("§e/blueprint capture <id> <x1> <y1> <z1> <x2> <y2> <z2>"); return true; }
+                String cap = policy.capProblem(player, repository);
+                if (cap != null) { sender.sendMessage("§c" + cap); return true; }
                 try {
                     ConstructionPlan plan = BlueprintCapture.capture(player, args[1],
                         Integer.parseInt(args[2]), Integer.parseInt(args[3]), Integer.parseInt(args[4]),
                         Integer.parseInt(args[5]), Integer.parseInt(args[6]), Integer.parseInt(args[7]));
-                    repository.saveNew(plan);
+                    repository.saveNew(plan, BlueprintPolicy.ownerOf(player));
                     sender.sendMessage("§aSaved " + plan.id() + ": " + plan.blockCount() + " blocks. Origin is the selection's minimum X/Y/Z corner.");
                     sender.sendMessage("§7Use /blueprint materials " + plan.id() + " to see its Survival cost.");
                 } catch (NumberFormatException e) { sender.sendMessage("§cCoordinates must be integers."); }
                 catch (IllegalArgumentException | IllegalStateException e) { sender.sendMessage("§c" + e.getMessage()); }
                 return true;
             }
+            case "delete" -> {
+                if (args.length != 2) { sender.sendMessage("§e/blueprint delete <id>"); return true; }
+                if (repository.get(args[1]).isEmpty()) { sender.sendMessage("§cUnknown blueprint: " + args[1]); return true; }
+                boolean allowed = sender instanceof Player p ? policy.canDelete(p, args[1], repository) : true; // console
+                if (!allowed) { sender.sendMessage("§cOnly the blueprint's owner or an operator can delete it."); return true; }
+                try {
+                    repository.delete(args[1]);
+                    sender.sendMessage("§aDeleted " + args[1] + ". §7The file is in plugins/Blueprints/blueprints/trash; running builds continue.");
+                } catch (IllegalArgumentException | IllegalStateException e) { sender.sendMessage("§c" + e.getMessage()); }
+                return true;
+            }
             case "list" -> {
                 sender.sendMessage("§6Blueprints:");
                 for (ConstructionPlan def : repository.all()) {
-                    sender.sendMessage("§e- " + def.id() + " §7(" + def.blockCount() + " blocks) §f" + def.name());
+                    sender.sendMessage("§e- " + def.id() + " §7(" + def.blockCount() + " blocks) §f" + def.name()
+                        + repository.owner(def.id()).map(o -> " §7by " + o.name()).orElse(""));
                 }
                 return true;
             }
@@ -165,9 +186,11 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) return sender.hasPermission("blueprints.admin")
-            ? List.of("list", "materials", "capture", "import", "start", "status", "cancel", "givechest")
-            : List.of("list", "materials", "capture", "start", "status", "cancel");
+            ? List.of("list", "materials", "capture", "import", "start", "status", "cancel", "delete", "givechest")
+            : List.of("list", "materials", "capture", "start", "status", "cancel", "delete");
         if (args.length == 2 && (args[0].equalsIgnoreCase("start") || args[0].equalsIgnoreCase("materials"))) return repository.all().stream().map(ConstructionPlan::id).toList();
+        if (args.length == 2 && args[0].equalsIgnoreCase("delete")) return repository.all().stream().map(ConstructionPlan::id)
+            .filter(id -> !(sender instanceof Player p) || policy.canDelete(p, id, repository)).toList();
         if (args.length == 2 && args[0].equalsIgnoreCase("import") && sender.hasPermission("blueprints.import")) return importFiles();
         if (args[0].equalsIgnoreCase("start") && args.length == 6) return List.of("0", "90", "180", "270");
         if (args[0].equalsIgnoreCase("start") && args.length == 7) return List.of("none", "x", "z");

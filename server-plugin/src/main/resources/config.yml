@@ -29,5 +29,10 @@ limits:
   max-span: 65
 
 uploads:
-  # Largest .litematic the client mod may upload, in kilobytes (64-8192). Needs blueprints.upload (op by default).
+  # Largest .litematic the client mod may upload, in kilobytes (64-8192).
   max-kilobytes: 2048
+  # true: every player may upload from the client mod. false: only players with blueprints.upload (op by default).
+  allow-everyone: false
+  # Most blueprints one player may own (captures and uploads both count); 0 = no cap. Operators
+  # (blueprints.admin) have no cap. Players can delete their own blueprints to make room.
+  max-per-player: 10

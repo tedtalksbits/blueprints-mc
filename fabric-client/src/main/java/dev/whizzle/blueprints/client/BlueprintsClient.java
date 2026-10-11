@@ -28,7 +28,7 @@ public final class BlueprintsClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		Net.register(Map.of(
 			Messages.WELCOME, this::onWelcome,
-			Messages.CATALOG, data -> { s.catalog = Messages.catalog(data); s.changeCounter++; },
+			Messages.CATALOG, data -> s.setCatalog(Messages.catalog(data)),
 			Messages.PLAN, data -> { Messages.Plan plan = Messages.plan(data); s.plans.put(plan.id(), plan); s.changeCounter++; },
 			Messages.MATERIALS, data -> { s.materials = Messages.materials(data); },
 			Messages.RESULT, this::onResult,

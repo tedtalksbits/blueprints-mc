@@ -11,8 +11,10 @@ class MessagesTest {
 	@Test void parsesEveryClientboundMessage() {
 		assertEquals(new Messages.Welcome(1, true, 16, false, 4096, 65, true, 2097152),
 			Messages.welcome(new Wire.Writer().varInt(1).bool(true).varInt(16).bool(false).varInt(4096).varInt(65).bool(true).varInt(2097152).bytes()));
-		var catalog = Messages.catalog(new Wire.Writer().varInt(1).utf("cabin").utf("Cabin").varInt(12).varInt(5).varInt(3).varInt(4).bytes());
-		assertEquals(new Messages.Entry("cabin", "Cabin", 12, 5, 3, 4), catalog.getFirst());
+		var catalog = Messages.catalog(new Wire.Writer().varInt(10).varInt(10).varInt(1).utf("cabin").utf("Cabin").varInt(12).varInt(5).varInt(3).varInt(4).utf("Alex").bool(true).bytes());
+		assertEquals(new Messages.Entry("cabin", "Cabin", 12, 5, 3, 4, "Alex", true), catalog.entries().getFirst());
+		assertTrue(catalog.full());
+		assertFalse(Messages.catalog(new Wire.Writer().varInt(0).varInt(50).varInt(0).bytes()).full(), "0 means no cap");
 		var plan = Messages.plan(new Wire.Writer().utf("cabin").utf("Cabin").varInt(2).utf("minecraft:stone").utf("minecraft:oak_log[axis=x]")
 			.varInt(2).varInt(0).varInt(0).varInt(0).varInt(0).varInt(1).varInt(0).varInt(0).varInt(1).bytes());
 		assertEquals(2, plan.blocks().size()); assertEquals("minecraft:oak_log[axis=x]", plan.palette().get(plan.blocks().get(1).state()));
@@ -26,7 +28,7 @@ class MessagesTest {
 		assertTrue(jobs.getFirst().active()); assertEquals(-3, jobs.getFirst().z());
 	}
 	@Test void rejectsCorruptCountsAndPaletteIndexes() {
-		assertThrows(IllegalArgumentException.class, () -> Messages.catalog(new Wire.Writer().varInt(-5).bytes()));
+		assertThrows(IllegalArgumentException.class, () -> Messages.catalog(new Wire.Writer().varInt(0).varInt(0).varInt(-5).bytes()));
 		assertThrows(IllegalArgumentException.class, () -> Messages.plan(new Wire.Writer().utf("a").utf("A").varInt(1).utf("minecraft:stone")
 			.varInt(1).varInt(0).varInt(0).varInt(0).varInt(7).bytes()));
 		assertThrows(IllegalArgumentException.class, () -> Messages.result(new byte[0]));

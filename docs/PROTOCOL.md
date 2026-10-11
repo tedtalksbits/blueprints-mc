@@ -1,4 +1,4 @@
-# Client ↔ server protocol (v1)
+# Client ↔ server protocol (v2)
 
 The Fabric client and the Paper plugin talk over plugin-message channels. The server is authoritative: the client
 only proposes a blueprint, an origin, and a transform; the plugin applies exactly the same checks as
@@ -12,7 +12,7 @@ Encoding matches Minecraft's `FriendlyByteBuf`: **VarInt**, **Int** (4 bytes, bi
 | `blueprints:hello` | C→S | VarInt protocol |
 | `blueprints:welcome` | S→C | VarInt protocol, Bool canBuild, VarInt chestSearchRadius, Bool canCapture, VarInt maxBlocks, VarInt maxSpan, Bool canUpload, VarInt maxUploadBytes |
 | `blueprints:catalog_request` | C→S | (empty) |
-| `blueprints:catalog` | S→C | VarInt n, n × (String id, String name, VarInt blocks, VarInt sizeX, sizeY, sizeZ) |
+| `blueprints:catalog` | S→C | VarInt limit (0 = no cap for you), VarInt ownedByYou, VarInt n, n × (String id, String name, VarInt blocks, VarInt sizeX, sizeY, sizeZ, String owner ("" if none), Bool deletableByYou) |
 | `blueprints:plan_request` | C→S | String id |
 | `blueprints:plan` | S→C | String id, String name, VarInt paletteSize, paletteSize × String blockState, VarInt n, n × (VarInt x, y, z, VarInt paletteIndex) |
 | `blueprints:materials_request` | C→S | String id |
@@ -25,6 +25,7 @@ Encoding matches Minecraft's `FriendlyByteBuf`: **VarInt**, **Int** (4 bytes, bi
 | `blueprints:upload_ready` | S→C | Bool ok, String message |
 | `blueprints:upload_chunk` | C→S | VarInt offset, VarInt length, length × byte (at most 30,000 bytes) |
 | `blueprints:upload_end` | C→S | (empty) |
+| `blueprints:delete` | C→S | String id |
 | `blueprints:jobs_request` | C→S | (empty) |
 | `blueprints:jobs` | S→C | VarInt n, n × (String jobId, String blueprintId, String name, VarInt done, VarInt total, String state, String reason, Int originX, originY, originZ) |
 
@@ -37,13 +38,18 @@ Encoding matches Minecraft's `FriendlyByteBuf`: **VarInt**, **Int** (4 bytes, bi
   clockwise seen from above. The origin stays fixed, so a transformed build can extend into negative offsets. The
   client keeps the visible box in place by sending `origin = desiredMinCorner − minCornerOfTransformedOffsets`.
 - `capture` follows `/blueprint capture` (Creative, `blueprints.capture`, supported blocks, limits); it replies with `result` and pushes `catalog` on success.
-- Uploads: `upload_begin` checks permission (`blueprints.upload`), name, and size, and answers `upload_ready`. Chunks
+- Uploads: `upload_begin` checks permission (`blueprints.upload`, or everyone when `uploads.allow-everyone`), the
+  per-player cap (`uploads.max-per-player`; operators exempt), name, and size, and answers `upload_ready`. Chunks
   must arrive in order (a gap aborts with a failed `result`); chunks are exempt from the request budget but bounded
   by the accepted size, and an upload expires after 2 minutes or on disconnect. `upload_end` imports the bytes
   exactly like `/blueprint import`, replies with `result`, and pushes `catalog`. Clients keep chunks under the
   game's 32 KB serverbound custom-payload limit.
+- Captures and uploads record the player as the blueprint's owner. `delete` is allowed for the owner and for
+  `blueprints.admin`; it replies with `result` and pushes `catalog`. The file moves to `blueprints/trash/`; running
+  builds keep their own snapshot.
 - `start` replies with `result`, then pushes `jobs` on success. `cancel` replies with `result` and `jobs`.
 - The server rate-limits each player to 20 requests per second and answers malformed requests with a failed
   `result`.
-- Bumping the protocol: change `ClientBridge.PROTOCOL` and the client's `Protocol.VERSION` together; the client
+- Bumping the protocol: change `ClientBridge.PROTOCOL` and the client's `Messages.PROTOCOL` together (v2 added
+  ownership and `delete`); the client
   shows a clear "update the mod/plugin" message on a mismatch.

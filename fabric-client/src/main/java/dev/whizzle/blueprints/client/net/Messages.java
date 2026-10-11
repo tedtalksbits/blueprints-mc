@@ -7,19 +7,25 @@ import java.util.List;
 
 /** Typed protocol messages and their encodings (pure Java; Minecraft-specific sending lives in Net). */
 public final class Messages {
-	public static final int PROTOCOL = 1;
+	public static final int PROTOCOL = 2;
 	public static final String HELLO = "hello", WELCOME = "welcome", CATALOG_REQUEST = "catalog_request", CATALOG = "catalog",
 		PLAN_REQUEST = "plan_request", PLAN = "plan", MATERIALS_REQUEST = "materials_request", MATERIALS = "materials",
 		START = "start", CANCEL = "cancel", RESULT = "result", JOBS_REQUEST = "jobs_request", JOBS = "jobs", CAPTURE = "capture",
-		UPLOAD_BEGIN = "upload_begin", UPLOAD_CHUNK = "upload_chunk", UPLOAD_END = "upload_end", UPLOAD_READY = "upload_ready";
+		UPLOAD_BEGIN = "upload_begin", UPLOAD_CHUNK = "upload_chunk", UPLOAD_END = "upload_end", UPLOAD_READY = "upload_ready", DELETE = "delete";
 	public static final List<String> CLIENTBOUND = List.of(WELCOME, CATALOG, PLAN, MATERIALS, RESULT, JOBS, UPLOAD_READY);
-	public static final List<String> SERVERBOUND = List.of(HELLO, CATALOG_REQUEST, PLAN_REQUEST, MATERIALS_REQUEST, START, CANCEL, JOBS_REQUEST, CAPTURE, UPLOAD_BEGIN, UPLOAD_CHUNK, UPLOAD_END);
+	public static final List<String> SERVERBOUND = List.of(HELLO, CATALOG_REQUEST, PLAN_REQUEST, MATERIALS_REQUEST, START, CANCEL, JOBS_REQUEST, CAPTURE, UPLOAD_BEGIN, UPLOAD_CHUNK, UPLOAD_END, DELETE);
 	private static final int MAX = 1 << 16;
 
 	private Messages() {}
 
 	public record Welcome(int protocol, boolean canBuild, int chestRadius, boolean canCapture, int maxBlocks, int maxSpan, boolean canUpload, int maxUploadBytes) {}
-	public record Entry(String id, String name, int blocks, int sizeX, int sizeY, int sizeZ) {}
+	/** {@code owner} is "" when nobody owns it; {@code deletable} means this player may delete it. */
+	public record Entry(String id, String name, int blocks, int sizeX, int sizeY, int sizeZ, String owner, boolean deletable) {}
+	/** {@code limit}: most blueprints this player may own (0 = no cap); {@code owned}: how many they own now. */
+	public record Catalog(int limit, int owned, List<Entry> entries) {
+		public static final Catalog EMPTY = new Catalog(0, 0, List.of());
+		public boolean full() { return limit > 0 && owned >= limit; }
+	}
 	public record Plan(String id, String name, List<String> palette, List<Placement.Block> blocks) {}
 	public record Material(String material, int needed, int inChest) {
 		public int missing() { return Math.max(0, needed - inChest); }
@@ -36,12 +42,13 @@ public final class Messages {
 
 	public static Welcome welcome(byte[] data) { Wire.Reader in = new Wire.Reader(data); return new Welcome(in.varInt(), in.bool(), in.varInt(), in.bool(), in.varInt(), in.varInt(), in.bool(), in.varInt()); }
 
-	public static List<Entry> catalog(byte[] data) {
+	public static Catalog catalog(byte[] data) {
 		Wire.Reader in = new Wire.Reader(data);
+		int limit = in.varInt(), owned = in.varInt();
 		int n = in.count(MAX);
 		List<Entry> out = new ArrayList<>(n);
-		for (int i = 0; i < n; i++) out.add(new Entry(in.utf(), in.utf(), in.varInt(), in.varInt(), in.varInt(), in.varInt()));
-		return out;
+		for (int i = 0; i < n; i++) out.add(new Entry(in.utf(), in.utf(), in.varInt(), in.varInt(), in.varInt(), in.varInt(), in.utf(), in.bool()));
+		return new Catalog(limit, owned, List.copyOf(out));
 	}
 
 	public static Plan plan(byte[] data) {

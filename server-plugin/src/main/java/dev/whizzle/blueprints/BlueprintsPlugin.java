@@ -31,9 +31,11 @@ public class BlueprintsPlugin extends JavaPlugin {
         try { java.nio.file.Files.createDirectories(imports); }
         catch (java.io.IOException e) { throw new IllegalStateException("Could not create " + imports, e); }
         BuildStarter starter = new BuildStarter(blueprints, buildManager, radius);
-        BlueprintCommand command = new BlueprintCommand(blueprints, buildManager, starter, imports);
+        BlueprintPolicy policy = new BlueprintPolicy(getConfig().getBoolean("uploads.allow-everyone", false),
+            getConfig().getInt("uploads.max-per-player", 10));
+        BlueprintCommand command = new BlueprintCommand(blueprints, buildManager, starter, imports, policy);
         ClientBridge bridge = new ClientBridge(blueprints, buildManager, starter,
-            (player, channel, data) -> player.sendPluginMessage(this, channel, data), getConfig().getInt("uploads.max-kilobytes", 2048) << 10);
+            (player, channel, data) -> player.sendPluginMessage(this, channel, data), getConfig().getInt("uploads.max-kilobytes", 2048) << 10, policy);
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
             public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) { bridge.forget(event.getPlayer()); }

@@ -19,6 +19,7 @@ public final class ClientState {
 	public Connection connection = Connection.UNKNOWN;
 	public Messages.Welcome welcome;
 	public List<Messages.Entry> catalog = List.of();
+	public Messages.Catalog catalogInfo = Messages.Catalog.EMPTY;
 	public final Map<String, Messages.Plan> plans = new HashMap<>();
 	public List<Messages.Job> jobs = List.of();
 	public Messages.Materials materials;
@@ -43,7 +44,7 @@ public final class ClientState {
 	private ClientState() {}
 
 	public void reset() {
-		connection = Connection.UNKNOWN; welcome = null; catalog = List.of(); plans.clear(); jobs = List.of(); materials = null;
+		connection = Connection.UNKNOWN; welcome = null; catalog = List.of(); catalogInfo = Messages.Catalog.EMPTY; plans.clear(); jobs = List.of(); materials = null;
 		selectedId = null; placement = null; previewId = null; lastResult = null; ticksSinceHello = 0; captureStep = 0; corner1 = corner2 = null; changeCounter++;
 	}
 
@@ -52,6 +53,18 @@ public final class ClientState {
 	public boolean capturing() { return captureStep > 0; }
 
 	public Optional<Messages.Entry> entry(String id) { return catalog.stream().filter(e -> e.id().equals(id)).findFirst(); }
+
+	/** A fresh catalog. Blueprints that disappeared (deleted) drop out of the selection, preview, and plan cache. */
+	public void setCatalog(Messages.Catalog c) {
+		catalogInfo = c;
+		catalog = c.entries();
+		java.util.Set<String> ids = new java.util.HashSet<>();
+		for (Messages.Entry e : catalog) ids.add(e.id());
+		plans.keySet().retainAll(ids);
+		if (selectedId != null && !ids.contains(selectedId)) { selectedId = null; materials = null; }
+		if (previewId != null && !ids.contains(previewId)) { placement = null; previewId = null; }
+		changeCounter++;
+	}
 
 	public void select(String id) {
 		selectedId = id;

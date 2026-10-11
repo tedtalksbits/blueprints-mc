@@ -102,6 +102,8 @@ public final class Actions {
 
 	public static void cancelJob(String jobId) { Net.send(Messages.CANCEL, Messages.id(jobId)); }
 
+	public static void deleteBlueprint(String id) { Net.send(Messages.DELETE, Messages.id(id)); }
+
 	public static void toast(boolean ok, String message) {
 		s().showResult(new Messages.Result(ok, message));
 		Minecraft mc = Minecraft.getInstance();

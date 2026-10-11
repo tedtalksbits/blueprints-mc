@@ -28,6 +28,11 @@ What this covers: the full loop with the Fabric client. You design in Creative, 
 | 10 | Put a `.litematic` in `%APPDATA%\.minecraft\schematics\` (or any subfolder). **B → Upload .litematic...**, pick it, keep or change the name, **Upload** | "Uploaded <name> (N blocks)", plus a list of anything skipped. It appears in the menu; preview and build it. Your tower uploads complete: 895 of 895 blocks (the campfire is built, empty). |
 | 10b | Build something with a **campfire, barrel, and sign** (put food in the campfire, items in the barrel, text on the sign), capture it, build it in Survival | The copies are built **empty**: no food, no items, blank sign. Rotating the blueprint turns standing signs correctly. |
 | 11 | Stop the server, set `limits.max-span: 10` in `plugins\Blueprints\config.yml`, start, try uploading the tower again under a new name | Refused: "Schematic is 12x18x16; the current limit is 10 blocks per side". Set it back to 65 afterwards. |
+| 12 | Stop the server. In `plugins\Blueprints\config.yml` set `uploads.allow-everyone: true` and `uploads.max-per-player: 2`. In the console, `deop TedTalks2`. Start, join, **B** | Top left shows **Yours: 0 / 2**. **Upload .litematic...** is there even though you're not an operator. |
+| 13 | Upload the tower twice under two names (e.g. `mine-a`, `mine-b`) | Both upload. **Yours: 2 / 2** turns gold; **Upload** is greyed out and its tooltip says to delete one. Each shows "by TedTalks2". |
+| 14 | Select `orientation-demo` (no owner) | No **Delete** button: you can only delete your own. |
+| 15 | Select `mine-a` **→ Delete** | A confirmation explains it. **Keep it** changes nothing; **Delete** removes it from the list, Yours drops to 1 / 2, Upload works again. The file is in `plugins\Blueprints\blueprints\trash\`. |
+| 16 | Start a build of `mine-b`, then delete `mine-b` while it builds | The build keeps going and finishes. Afterwards `op TedTalks2` and set the two settings back (or leave them). |
 
 ## Please report
 
@@ -40,5 +45,5 @@ Screenshots of anything that looks wrong, plus anything that felt clunky: key ch
 1. **The preview shows each block's shape in its map color, not real textures.** Orientation is clear (stairs, slabs, doors, fences, walls show their shape). Real textured, see-through models are possible and would be the next client step.
 2. **Size limits are now in `config.yml`** (`limits.max-blocks`, `limits.max-span`, `uploads.max-kilobytes`), with hard ceilings of 32,768 blocks and 128 per side.
 3. **Capture new...** is shown to anyone with capture permission; in Survival the server refuses with "Capture requires Creative mode".
-4. **Uploads are operator-only by default** (`blueprints.upload`). Grant it to friends with a permissions plugin, or ask me for a config switch.
+4. **Uploads are operator-only by default.** Set `uploads.allow-everyone: true` to open them to everyone; `uploads.max-per-player` (default 10) caps how many each player keeps. Operators can delete anyone's blueprint; deleted files go to `blueprints\trash\`.
 5. **The client needs Fabric for Minecraft 26.2.** Players without it keep using `/blueprint` commands.

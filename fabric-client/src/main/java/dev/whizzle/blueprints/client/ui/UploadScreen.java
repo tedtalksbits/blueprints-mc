@@ -109,7 +109,7 @@ public final class UploadScreen extends Screen {
 		var welcome = ClientState.INSTANCE.welcome;
 		if (welcome != null) {
 			g.text(font, "Server limits: " + (welcome.maxUploadBytes() >> 10) + " KB file, " + welcome.maxBlocks() + " blocks, " + welcome.maxSpan() + " per side.", x, 132, Hud.GRAY);
-			g.text(font, "Unsupported blocks (chests, signs, beds...) are skipped and listed.", x, 144, Hud.GRAY);
+			g.text(font, "Unsupported blocks (chests, beds, rails...) are skipped and listed.", x, 144, Hud.GRAY);
 		}
 	}
 

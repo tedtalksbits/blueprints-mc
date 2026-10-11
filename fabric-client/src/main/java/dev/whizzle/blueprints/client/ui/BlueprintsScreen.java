@@ -5,6 +5,7 @@ import dev.whizzle.blueprints.client.ClientState;
 import dev.whizzle.blueprints.client.net.Messages;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -49,12 +50,23 @@ public final class BlueprintsScreen extends Screen {
 			addRenderableWidget(Button.builder(Component.literal(">"), b -> { listPage++; rebuildWidgets(); }).pos(LIST_WIDTH - 20, height - 76).size(30, 20).build()).active = listPage < pages - 1;
 		}
 
-		if (s().welcome != null && s().welcome.canUpload())
-			addRenderableWidget(Button.builder(Component.literal("Upload .litematic..."), b -> minecraft.gui.setScreen(new UploadScreen(this)))
+		boolean full = s().catalogInfo.full();
+		Tooltip fullTip = Tooltip.create(Component.literal("You have " + s().catalogInfo.owned() + " of " + s().catalogInfo.limit()
+			+ " blueprints allowed on this server. Delete one of yours to add another."));
+		if (s().welcome != null && s().welcome.canUpload()) {
+			Button upload = addRenderableWidget(Button.builder(Component.literal("Upload .litematic..."), b -> minecraft.gui.setScreen(new UploadScreen(this)))
 				.pos(10, height - 52).size(LIST_WIDTH, 20).build());
-		if (s().welcome != null && s().welcome.canCapture())
-			addRenderableWidget(Button.builder(Component.literal("Capture new..."), b -> { Actions.beginCapture(); onClose(); })
+			if (full) { upload.active = false; upload.setTooltip(fullTip); }
+		}
+		if (s().welcome != null && s().welcome.canCapture()) {
+			Button capture = addRenderableWidget(Button.builder(Component.literal("Capture new..."), b -> { Actions.beginCapture(); onClose(); })
 				.pos(10, height - 28).size(LIST_WIDTH, 20).build());
+			if (full) { capture.active = false; capture.setTooltip(fullTip); }
+		}
+		Messages.Entry chosenEntry = s().selectedId == null ? null : s().entry(s().selectedId).orElse(null);
+		if (chosenEntry != null && chosenEntry.deletable())
+			addRenderableWidget(Button.builder(Component.literal("Delete"), b -> confirmDelete(chosenEntry))
+				.pos(width - 70, 26).size(60, 20).build());
 
 		int x = LIST_WIDTH + 20, y = height - 28, w = (width - x - 10 - 5 * 4) / 6;
 		boolean selected = s().selectedId != null, previewing = s().previewing();
@@ -78,6 +90,17 @@ public final class BlueprintsScreen extends Screen {
 			jy -= ROW;
 		}
 		seenChange = s().changeCounter;
+	}
+
+	/** Deleting removes the blueprint for everyone on the server, so ask first. */
+	private void confirmDelete(Messages.Entry e) {
+		minecraft.gui.setScreen(new net.minecraft.client.gui.screens.ConfirmScreen(yes -> {
+			if (yes) Actions.deleteBlueprint(e.id());
+			minecraft.gui.setScreen(this);
+		}, Component.literal("Delete blueprint " + e.name() + "?"),
+			Component.literal("It disappears from the list for everyone on this server. Builds already running from it keep going. "
+				+ "An operator can restore it from the server's trash folder."),
+			Component.literal("Delete"), Component.literal("Keep it")));
 	}
 
 	/** Stopping a build is irreversible (placed blocks stay, used items are gone), so ask first. */
@@ -106,6 +129,9 @@ public final class BlueprintsScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(g, mouseX, mouseY, delta);
 		g.centeredText(font, title.getString(), width / 2, 10, Hud.WHITE);
+		Messages.Catalog info = s().catalogInfo;
+		if (info.limit() > 0 && s().welcome != null && (s().welcome.canUpload() || s().welcome.canCapture()))
+			g.text(font, "Yours: " + info.owned() + " / " + info.limit(), 10, 12, info.full() ? Hud.GOLD : Hud.GRAY);
 		int x = LIST_WIDTH + 20, y = 30;
 		ClientState s = s();
 		switch (s.connection) {
@@ -118,9 +144,11 @@ public final class BlueprintsScreen extends Screen {
 		if (s.selectedId == null) { g.text(font, "Choose a blueprint on the left.", x, y, Hud.GRAY); return; }
 		Messages.Entry e = s.entry(s.selectedId).orElse(null);
 		if (e == null) return;
-		g.text(font, e.name(), x, y, Hud.GOLD);
+		g.text(font, font.plainSubstrByWidth(e.name(), width - x - (e.deletable() ? 80 : 10)), x, y, Hud.GOLD);
 		y += 12;
-		g.text(font, e.sizeX() + " x " + e.sizeY() + " x " + e.sizeZ() + "   " + e.blocks() + " blocks   id: " + e.id(), x, y, Hud.GRAY);
+		String by = e.owner().isEmpty() ? "" : "   by " + e.owner();
+		g.text(font, font.plainSubstrByWidth(e.sizeX() + " x " + e.sizeY() + " x " + e.sizeZ() + "   " + e.blocks() + " blocks" + by + "   id: " + e.id(),
+			width - x - (e.deletable() ? 80 : 10)), x, y, Hud.GRAY);
 		y += 16;
 
 		Messages.Materials m = s.materials;

@@ -58,9 +58,11 @@ class ClientBridgeTest {
     }
     @Test void catalogListsBlueprintsWithSize() {
         Wire.Reader in = request(ClientBridge.CATALOG_REQUEST, new Wire.Writer(), ClientBridge.CATALOG);
+        assertEquals(0, in.varInt(), "operators have no cap"); assertEquals(0, in.varInt(), "owns none");
         assertEquals(1, in.varInt());
         assertEquals("orientation-demo", in.utf(64)); assertEquals("Orientation Demo", in.utf(256));
-        assertEquals(38, in.varInt()); assertEquals(5, in.varInt()); assertEquals(3, in.varInt()); assertEquals(5, in.varInt()); in.end();
+        assertEquals(38, in.varInt()); assertEquals(5, in.varInt()); assertEquals(3, in.varInt()); assertEquals(5, in.varInt());
+        assertEquals("", in.utf(64), "bundled example has no owner"); assertTrue(in.bool(), "operators may delete anything"); in.end();
     }
     @Test void planSendsEveryBlockThroughAPalette() {
         Wire.Reader in = request(ClientBridge.PLAN_REQUEST, new Wire.Writer().utf("orientation-demo"), ClientBridge.PLAN);
@@ -193,5 +195,106 @@ class ClientBridgeTest {
         sent.clear();
         for (int i = 0; i < 50; i++) bridge.onPluginMessageReceived(ClientBridge.CATALOG_REQUEST, player, new byte[0]);
         assertTrue(sent.size() <= 20, "replies: " + sent.size());
+    }
+
+    // ---- Ownership: allow-everyone uploads, per-player cap, owner/operator delete ----
+
+    record Row(String id, String owner, boolean deletable) {}
+    record Catalog(int limit, int owned, Map<String, Row> rows) {}
+    Wire.Reader ask(ClientBridge b, Player who, String channel, Wire.Writer body, String expect) {
+        sent.clear();
+        b.onPluginMessageReceived(channel, who, body.bytes());
+        return new Wire.Reader(sent.stream().filter(x -> x.channel().equals(expect)).reduce((a, c) -> c)
+            .orElseThrow(() -> new AssertionError("no " + expect + "; got " + sent.stream().map(Sent::channel).toList())).data());
+    }
+    Catalog catalog(ClientBridge b, Player who) {
+        Wire.Reader in = ask(b, who, ClientBridge.CATALOG_REQUEST, new Wire.Writer(), ClientBridge.CATALOG);
+        int limit = in.varInt(), owned = in.varInt(), n = in.varInt();
+        Map<String, Row> rows = new HashMap<>();
+        for (int i = 0; i < n; i++) {
+            String id = in.utf(64); in.utf(256); in.varInt(); in.varInt(); in.varInt(); in.varInt();
+            rows.put(id, new Row(id, in.utf(64), in.bool()));
+        }
+        in.end();
+        return new Catalog(limit, owned, rows);
+    }
+    /** Upload a small file in one chunk; returns the begin-or-end message and whether it succeeded. */
+    Map.Entry<Boolean, String> upload(ClientBridge b, Player who, String id) throws Exception {
+        byte[] file = gzipLitematic(3);
+        Wire.Reader ready = ask(b, who, ClientBridge.UPLOAD_BEGIN, new Wire.Writer().utf(id).varInt(file.length), ClientBridge.UPLOAD_READY);
+        if (!ready.bool()) return Map.entry(false, ready.utf(1000));
+        b.onPluginMessageReceived(ClientBridge.UPLOAD_CHUNK, who, new Wire.Writer().varInt(0).bytes(file).bytes());
+        Wire.Reader done = ask(b, who, ClientBridge.UPLOAD_END, new Wire.Writer(), ClientBridge.RESULT);
+        return Map.entry(done.bool(), done.utf(10000));
+    }
+    ClientBridge bridgeWith(BlueprintPolicy policy) {
+        return new ClientBridge(repository, plugin.builds(), new BuildStarter(repository, plugin.builds(), 16),
+            (p, channel, data) -> sent.add(new Sent(channel, data)), 2 << 20, policy);
+    }
+
+    @Test void allowEveryoneLetsPlayersUploadAndRecordsTheOwner() throws Exception {
+        PlayerMock alex = server.addPlayer("Alex");
+        assertFalse(upload(bridge, alex, "nope").getKey(), "default: uploads are for blueprints.upload only");
+        ClientBridge open = bridgeWith(new BlueprintPolicy(true, 10));
+        Wire.Reader welcome = ask(open, alex, ClientBridge.HELLO, new Wire.Writer().varInt(ClientBridge.PROTOCOL), ClientBridge.WELCOME);
+        welcome.varInt(); welcome.bool(); welcome.varInt(); welcome.bool(); welcome.varInt(); welcome.varInt();
+        assertTrue(welcome.bool(), "welcome says this player can upload");
+        assertTrue(upload(open, alex, "alex-hut").getKey());
+        Catalog c = catalog(open, alex);
+        assertEquals(10, c.limit()); assertEquals(1, c.owned());
+        assertEquals(new Row("alex-hut", "Alex", true), c.rows().get("alex-hut"));
+        assertFalse(c.rows().get("orientation-demo").deletable(), "players can't delete what isn't theirs");
+        BlueprintRepository fresh = new BlueprintRepository(plugin); fresh.load();
+        assertEquals("Alex", fresh.owner("alex-hut").orElseThrow().name(), "owner survives a restart");
+        assertEquals(alex.getUniqueId(), fresh.owner("alex-hut").orElseThrow().id());
+    }
+    @Test void perPlayerCapCountsCapturesAndUploadsButNotForOperators() throws Exception {
+        PlayerMock alex = server.addPlayer("Alex");
+        ClientBridge capped = bridgeWith(new BlueprintPolicy(true, 2));
+        assertTrue(upload(capped, alex, "one").getKey());
+        assertTrue(upload(capped, alex, "two").getKey());
+        var third = upload(capped, alex, "three");
+        assertFalse(third.getKey()); assertTrue(third.getValue().contains("limit is 2"), third.getValue());
+        assertTrue(repository.get("three").isEmpty());
+        player.setGameMode(GameMode.CREATIVE); world.getBlockAt(1, 65, 1).setType(Material.STONE);
+        for (int i = 0; i < 3; i++) assertTrue(upload(capped, player, "op-" + i).getKey(), "operators have no cap");
+        alex.addAttachment(plugin, "blueprints.capture", true); alex.setGameMode(GameMode.CREATIVE);
+        alex.teleport(new Location(world, 0, 65, 0));
+        Wire.Reader cap = ask(capped, alex, ClientBridge.CAPTURE, new Wire.Writer().utf("cap").int32(1).int32(65).int32(1).int32(1).int32(65).int32(1), ClientBridge.RESULT);
+        assertFalse(cap.bool(), "captures count toward the cap too"); assertTrue(cap.utf(1000).contains("limit"));
+        // Deleting one makes room again.
+        assertTrue(ask(capped, alex, ClientBridge.DELETE, new Wire.Writer().utf("one"), ClientBridge.RESULT).bool());
+        assertTrue(upload(capped, alex, "three").getKey());
+    }
+    @Test void onlyOwnersAndOperatorsDeleteAndFilesGoToTrash() throws Exception {
+        PlayerMock alex = server.addPlayer("Alex"), sam = server.addPlayer("Sam");
+        ClientBridge open = bridgeWith(new BlueprintPolicy(true, 10));
+        assertTrue(upload(open, alex, "alex-hut").getKey());
+        assertFalse(catalog(open, sam).rows().get("alex-hut").deletable());
+        Wire.Reader refused = ask(open, sam, ClientBridge.DELETE, new Wire.Writer().utf("alex-hut"), ClientBridge.RESULT);
+        assertFalse(refused.bool()); assertTrue(repository.get("alex-hut").isPresent());
+        assertFalse(ask(open, alex, ClientBridge.DELETE, new Wire.Writer().utf("orientation-demo"), ClientBridge.RESULT).bool());
+
+        Wire.Reader ok = ask(open, alex, ClientBridge.DELETE, new Wire.Writer().utf("alex-hut"), ClientBridge.RESULT);
+        assertTrue(ok.bool(), "owner deletes their own");
+        assertTrue(sent.stream().anyMatch(x -> x.channel().equals(ClientBridge.CATALOG)), "catalog refreshed");
+        assertTrue(repository.get("alex-hut").isEmpty());
+        var dir = plugin.getDataFolder().toPath().resolve("blueprints");
+        assertTrue(java.nio.file.Files.exists(dir.resolve("trash/blueprint-alex-hut.yml")), "kept in trash for operators");
+        BlueprintRepository fresh = new BlueprintRepository(plugin); fresh.load();
+        assertTrue(fresh.get("alex-hut").isEmpty(), "stays deleted after a restart");
+        assertEquals(0, fresh.ownedBy(alex.getUniqueId()));
+
+        assertTrue(upload(open, alex, "alex-hut").getKey(), "the name is free again");
+        assertTrue(ask(open, player, ClientBridge.DELETE, new Wire.Writer().utf("alex-hut"), ClientBridge.RESULT).bool(), "operators delete anyone's");
+        assertTrue(java.nio.file.Files.list(dir.resolve("trash")).count() >= 2, "a second trashed copy doesn't overwrite the first");
+        assertFalse(ask(open, player, ClientBridge.DELETE, new Wire.Writer().utf("ghost"), ClientBridge.RESULT).bool());
+    }
+    @Test void deletingABlueprintLeavesItsRunningBuildAlone() {
+        fundedChest(-2);
+        assertTrue(request(ClientBridge.START, new Wire.Writer().utf("orientation-demo").int32(3).int32(65).int32(3).varInt(0).varInt(0), ClientBridge.RESULT).bool());
+        assertTrue(request(ClientBridge.DELETE, new Wire.Writer().utf("orientation-demo"), ClientBridge.RESULT).bool());
+        assertEquals(1, plugin.builds().jobs().size());
+        assertEquals(38, plugin.builds().jobs().iterator().next().plan().blockCount(), "job keeps its own snapshot");
     }
 }

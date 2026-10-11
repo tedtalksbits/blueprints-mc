@@ -76,7 +76,7 @@ Install: Fabric Loader for 26.2, plus `fabric-api-0.161.0+26.2.jar` and `bluepri
 
 | Key (rebindable) | Action |
 |---|---|
-| `B` | Open Blueprints: choose a blueprint, see needed vs. in-chest materials, opacity, start, your builds, cancel, **Capture new...** (Creative), **Upload .litematic...** |
+| `B` | Open Blueprints: choose a blueprint, see needed vs. in-chest materials, opacity, start, your builds, cancel, **Capture new...** (Creative), **Upload .litematic...**, **Delete** (your own blueprints) |
 | Arrow keys | Move the preview away / closer / left / right, relative to where you face (hold to repeat) |
 | `Page Up` / `Page Down` | Move up / down |
 | `G` | Move the preview to the block under your crosshair |
@@ -84,7 +84,9 @@ Install: Fabric Loader for 26.2, plus `fabric-api-0.161.0+26.2.jar` and `bluepri
 | `Enter` | Start the build here (uses your nearest free Builder's Chest) |
 | `Backspace` | Close the preview |
 
-**Upload .litematic...** lists files in your `.minecraft/schematics` folder (where Litematica saves; subfolders included). Pick one, name it, upload; the server imports it with the same rules as `/blueprint import` (needs `blueprints.upload`, op by default; size limit `uploads.max-kilobytes`).
+**Upload .litematic...** lists files in your `.minecraft/schematics` folder (where Litematica saves; subfolders included). Pick one, name it, upload; the server imports it with the same rules as `/blueprint import` (needs `blueprints.upload`, op by default, or `uploads.allow-everyone: true`; size limit `uploads.max-kilobytes`).
+
+**Ownership.** Whoever captures or uploads a blueprint owns it; the menu shows "by <name>". Owners see a **Delete** button on their own blueprints (operators on all of them). Deleted files move to `plugins/Blueprints/blueprints/trash/`; move one back and restart to restore it. Builds already running from a deleted blueprint finish normally. Each player may own up to `uploads.max-per-player` blueprints (default 10; operators have no cap); the menu shows "Yours: 3 / 10" and disables Upload/Capture when full. Blueprints from before this feature, and ones placed by hand in the folder, have no owner, so only operators can delete them. Command: `/blueprint delete <id>`.
 
 Preview keys only act while a preview is shown, and the on-screen panel always lists the current bindings. The preview draws each block's real shape (stairs, slabs, doors, walls, fences show their orientation) in its map color; blocks already built correctly disappear, and anything in the way is drawn red. While builds run, the panel shows progress and why a build is paused; selecting a blueprint you are building shows what's left against that build's own chest. Stopping a build asks for confirmation. Shader packs (Iris) can hide the preview; the panel says so, and toggling shaders while placing works around it.
 
@@ -109,6 +111,8 @@ Only block states are imported; entities and container contents are ignored. Ref
 | `limits.max-blocks` | 4096 | Largest blueprint in blocks (1-32768) for capture, import, upload, and builds |
 | `limits.max-span` | 65 | Longest side in blocks (1-128) |
 | `uploads.max-kilobytes` | 2048 | Largest `.litematic` the client mod may upload (64-8192) |
+| `uploads.allow-everyone` | false | `true` lets every player upload from the client mod, not just `blueprints.upload` |
+| `uploads.max-per-player` | 10 | Most blueprints one player may own (captures + uploads); 0 = no cap; operators exempt |
 | `construction.max-active-jobs` / `max-active-jobs-per-player` | 16 / 2 | Concurrent unfinished builds |
 | `construction.ticks-between-cycles` / `steps-per-cycle` | 10 / 1 | Build speed |
 | `builders-chest.search-radius` | 16 | How far `/blueprint start` looks for your Builder's Chest |
@@ -130,7 +134,7 @@ Jobs started before this feature keep using their original chest.
 
 ## Permissions and scope
 
-`blueprints.use` defaults to everyone (list/materials/status and cancellation of one's own job). **`blueprints.build` defaults to operators** and is required both to start and to continue construction. `blueprints.admin` lets operators inspect/cancel others' jobs. Owners must stay online in Survival in the same world, within 128 blocks of each destination. Builds must stay within 128 blocks of their chest.
+`blueprints.use` defaults to everyone (list/materials/status and cancellation of one's own job). **`blueprints.build` defaults to operators** and is required both to start and to continue construction. `blueprints.admin` lets operators inspect/cancel others' jobs, delete any blueprint, and skip the per-player blueprint cap. Owners must stay online in Survival in the same world, within 128 blocks of each destination. Builds must stay within 128 blocks of their chest.
 
 V1 is for trusted test builders. It does **not** integrate claim protection or CoreProtect, emit synthetic player-placement events, or establish ownership of arbitrary chests. Builds can only draw from the starter's own Builder's Chest, but granting build permission still allows placement in otherwise protected areas. Do not grant it broadly on the existing multiplayer server yet.
 
