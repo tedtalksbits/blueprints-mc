@@ -24,7 +24,7 @@ jobs:
         with:
           build-root-directory: fabric-client
       - run: ./gradlew build --no-daemon
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Blueprints-Fabric-Client
           path: fabric-client/build/libs/blueprints-client-*.jar
@@ -38,7 +38,7 @@ jobs:
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew build --no-daemon
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Blueprints-Paper
           path: server-plugin/build/libs/*.jar
