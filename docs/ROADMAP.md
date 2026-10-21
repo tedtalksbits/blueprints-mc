@@ -1,35 +1,33 @@
 # Roadmap
 
-## M0 — Construction engine (this bundle)
+## M0 — Server construction slice (implemented; core live acceptance passed 2026-10-10)
 
-Prove exact block-state placement, real material consumption, slow construction, persistence, and pause/resume behavior on Paper 26.2.
+Pinned Paper 26.2/Java 25 build, Gradle wrapper, validated immutable plans, paired doors, correct slab costs, exact-state placement, material list, owner-bound Builder's Chest funding (one chest per job, 2 active jobs per player), global budget, pause/resume, immediate checkpoints on state changes, clean restart continuation, crash quarantine, and automated regression tests.
 
-## M1 — Client preview
+Passed live on Paper 26.2: empty/partial funding, all 38 demo states, clean restart with source edits, obstruction and free matching steps, Creative capture with a `90 x` transform, Builder's Chest crafting/binding/merge refusal/break return.
 
-Fabric 26.2 client mod with blueprint browser, hologram renderer, opacity, move/rotate/mirror, layer/focus view, and a clean placement panel.
+Not yet live-tested (covered by unit tests): chunk unloading, owner leaving/mode change, permission revocation, cancel, forced process kill. Next: verify Geyser commands. Add claim protection and CoreProtect hooks before granting construction permission broadly. Profile persistence limits.
 
-## M2 — Litematic import
+Deferred idea: a floating text display above each Builder's Chest showing job progress (needs entity lifecycle handling).
 
-Read gzip-compressed NBT `.litematic` files, resolve region palettes and packed block-state arrays, normalize to relative coordinates + serialized Minecraft block data, and calculate material requirements.
+## M1 — Capture, positioning, and client preview (implemented)
 
-Do not couple the server to Litematica's file format.
+Creative capture (up to 65 blocks per side), `.litematic` import, ~785 supported block types, and tested rotation/mirroring. The Fabric 26.2 client previews, moves, rotates, and mirrors a blueprint, shows needed vs. in-chest materials, starts and cancels builds, and shows progress and pause reasons. Verified in a real 26.2 client against a real Paper server.
 
-## M3 — Client/server protocol
+Next: true block-model rendering for the preview (currently outline shapes in map colors), a blueprint browser with thumbnails, and a server-side blueprint browser for players without the mod. `.litematic` upload from the client is done.
 
-Versioned custom payload handshake. Server advertises capabilities and limits. Client uploads blueprint metadata/hash and block payload in bounded chunks. Server validates size, allowed blocks, transform, region and permissions before creating a job.
+## M2 — Client uploads and bounded protocol
 
-## M4 — Survival UX
+Litematic reading exists server-side. Add client upload of schematics with a versioned handshake, capability negotiation, bounded uploads, server validation, and owner/region checks. Do not import NBT or entities implicitly.
 
-Builder's Chest selection, material checklist, missing-material status, estimated duration, start/cancel controls, construction particles/sounds, progress HUD, and pause reasons.
+## M3 — Wider survival support
 
-## M5 — Construction planner
+Expand the material/state registry with tests for each new family, add support/physics planning, other inventory sources, better history management, and clearer player pause controls. Redstone, fluids, beds, block entities, and moving mechanisms require deliberate semantics before support.
 
-Replace simple Y-order with structural phases and adjacency-aware ordering so buildings visibly grow foundation → frame/walls → floors → roof → detail. Keep placement rate configurable and bounded.
+## M4 — Production hardening
 
-## M6 — Hardening
+Protection/audit integrations, persistent inventory/world transaction strategy, shutdown/crash fault injection on real Paper, multi-job performance profiling, large-blueprint storage, and recovery tooling. Keep the server authoritative throughout.
 
-Block-to-item registry, multi-block blocks, waterlogging, redstone update policy, block entities, protection hooks, crash/restart tests, chunk unload behavior, malicious payload limits, and large-build profiling.
+## Non-goals
 
-## Explicit non-goals for early releases
-
-No instant paste button, no Creative inventory spawning, no imported chest contents, no entity cloning, no WorldEdit replacement, and no attempt to reproduce every Litematica feature.
+No instant paste, free Survival materials, imported inventory contents, entity cloning, or broad recreation of Litematica's UI.

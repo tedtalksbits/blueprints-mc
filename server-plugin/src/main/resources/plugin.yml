@@ -1,16 +1,29 @@
 name: Blueprints
 version: ${version}
 main: dev.whizzle.blueprints.BlueprintsPlugin
-api-version: '1.21'
+api-version: '26.2'
 authors: [Tedane, OpenAI]
 description: Survival-funded, time-based schematic construction for Paper.
 commands:
   blueprint:
     description: Manage blueprint construction jobs.
-    usage: /blueprint <list|start|status|cancel>
+    usage: /blueprint <list|materials|capture|import|start|status|cancel|givechest>
     permission: blueprints.use
 permissions:
   blueprints.use:
     default: true
+  blueprints.build:
+    description: Start trusted V1 construction jobs (no claim-plugin integration yet).
+    default: op
   blueprints.admin:
+    description: Inspect/cancel any job and use /blueprint givechest.
+    default: op
+  blueprints.upload:
+    description: Upload .litematic files from the Blueprints client mod.
+    default: op
+  blueprints.import:
+    description: Import .litematic files from plugins/Blueprints/import.
+    default: op
+  blueprints.capture:
+    description: Capture small Creative selections as validated blueprints.
     default: op

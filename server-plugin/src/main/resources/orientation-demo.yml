@@ -1,18 +1,42 @@
 id: orientation-demo
 name: Orientation Demo
-# A tiny platform with stairs facing four directions. The point is to prove the server
-# can place exact block states instead of relying on player click orientation.
+# 5x5 base, orientation cases, and a paired door (one item).
 blocks:
-  - {x: 0, y: 0, z: 0, block-data: "minecraft:stone_bricks"}
-  - {x: 1, y: 0, z: 0, block-data: "minecraft:stone_bricks"}
-  - {x: 2, y: 0, z: 0, block-data: "minecraft:stone_bricks"}
-  - {x: 0, y: 0, z: 1, block-data: "minecraft:stone_bricks"}
-  - {x: 1, y: 0, z: 1, block-data: "minecraft:stone_bricks"}
-  - {x: 2, y: 0, z: 1, block-data: "minecraft:stone_bricks"}
-  - {x: 0, y: 0, z: 2, block-data: "minecraft:stone_bricks"}
-  - {x: 1, y: 0, z: 2, block-data: "minecraft:stone_bricks"}
-  - {x: 2, y: 0, z: 2, block-data: "minecraft:stone_bricks"}
-  - {x: 1, y: 1, z: -1, block-data: "minecraft:oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]"}
-  - {x: 3, y: 1, z: 1, block-data: "minecraft:oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]"}
-  - {x: 1, y: 1, z: 3, block-data: "minecraft:oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]"}
-  - {x: -1, y: 1, z: 1, block-data: "minecraft:oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]"}
+  - {x: 0, y: 0, z: 0, block-data: 'minecraft:stone_bricks'}
+  - {x: 0, y: 0, z: 1, block-data: 'minecraft:stone_bricks'}
+  - {x: 0, y: 0, z: 2, block-data: 'minecraft:stone_bricks'}
+  - {x: 0, y: 0, z: 3, block-data: 'minecraft:stone_bricks'}
+  - {x: 0, y: 0, z: 4, block-data: 'minecraft:stone_bricks'}
+  - {x: 1, y: 0, z: 0, block-data: 'minecraft:stone_bricks'}
+  - {x: 1, y: 0, z: 1, block-data: 'minecraft:stone_bricks'}
+  - {x: 1, y: 0, z: 2, block-data: 'minecraft:stone_bricks'}
+  - {x: 1, y: 0, z: 3, block-data: 'minecraft:stone_bricks'}
+  - {x: 1, y: 0, z: 4, block-data: 'minecraft:stone_bricks'}
+  - {x: 2, y: 0, z: 0, block-data: 'minecraft:stone_bricks'}
+  - {x: 2, y: 0, z: 1, block-data: 'minecraft:stone_bricks'}
+  - {x: 2, y: 0, z: 2, block-data: 'minecraft:stone_bricks'}
+  - {x: 2, y: 0, z: 3, block-data: 'minecraft:stone_bricks'}
+  - {x: 2, y: 0, z: 4, block-data: 'minecraft:stone_bricks'}
+  - {x: 3, y: 0, z: 0, block-data: 'minecraft:stone_bricks'}
+  - {x: 3, y: 0, z: 1, block-data: 'minecraft:stone_bricks'}
+  - {x: 3, y: 0, z: 2, block-data: 'minecraft:stone_bricks'}
+  - {x: 3, y: 0, z: 3, block-data: 'minecraft:stone_bricks'}
+  - {x: 3, y: 0, z: 4, block-data: 'minecraft:stone_bricks'}
+  - {x: 4, y: 0, z: 0, block-data: 'minecraft:stone_bricks'}
+  - {x: 4, y: 0, z: 1, block-data: 'minecraft:stone_bricks'}
+  - {x: 4, y: 0, z: 2, block-data: 'minecraft:stone_bricks'}
+  - {x: 4, y: 0, z: 3, block-data: 'minecraft:stone_bricks'}
+  - {x: 4, y: 0, z: 4, block-data: 'minecraft:stone_bricks'}
+  - {x: 0, y: 1, z: 0, block-data: 'minecraft:oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]' }
+  - {x: 1, y: 1, z: 0, block-data: 'minecraft:oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]' }
+  - {x: 2, y: 1, z: 0, block-data: 'minecraft:oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]' }
+  - {x: 3, y: 1, z: 0, block-data: 'minecraft:oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]' }
+  - {x: 0, y: 1, z: 2, block-data: 'minecraft:oak_log[axis=x]' }
+  - {x: 1, y: 1, z: 2, block-data: 'minecraft:oak_log[axis=y]' }
+  - {x: 2, y: 1, z: 2, block-data: 'minecraft:oak_log[axis=z]' }
+  - {x: 0, y: 1, z: 4, block-data: 'minecraft:oak_slab[type=bottom,waterlogged=false]' }
+  - {x: 1, y: 1, z: 4, block-data: 'minecraft:oak_slab[type=top,waterlogged=false]' }
+  - {x: 2, y: 1, z: 4, block-data: 'minecraft:oak_slab[type=double,waterlogged=false]' }
+  - {x: 4, y: 1, z: 2, block-data: 'minecraft:oak_trapdoor[facing=west,half=top,open=true,powered=false,waterlogged=false]' }
+  - {x: 4, y: 1, z: 4, block-data: 'minecraft:oak_door[facing=north,half=lower,hinge=right,open=false,powered=false]' }
+  - {x: 4, y: 2, z: 4, block-data: 'minecraft:oak_door[facing=north,half=upper,hinge=right,open=false,powered=false]' }

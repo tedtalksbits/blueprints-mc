@@ -1,0 +1,15 @@
+{
+	"key.category.blueprints.main": "Blueprints",
+	"key.blueprints.open": "Open Blueprints",
+	"key.blueprints.forward": "Preview: move away",
+	"key.blueprints.back": "Preview: move closer",
+	"key.blueprints.left": "Preview: move left",
+	"key.blueprints.right": "Preview: move right",
+	"key.blueprints.up": "Preview: move up",
+	"key.blueprints.down": "Preview: move down",
+	"key.blueprints.rotate": "Preview: rotate",
+	"key.blueprints.mirror": "Preview: mirror",
+	"key.blueprints.here": "Preview: move to crosshair",
+	"key.blueprints.confirm": "Preview: start build",
+	"key.blueprints.hide": "Preview: close"
+}

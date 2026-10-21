@@ -1,0 +1,19 @@
+{
+	"schemaVersion": 1,
+	"id": "blueprints",
+	"version": "${version}",
+	"name": "Blueprints",
+	"description": "Preview, position, rotate, and start Survival-funded builds on servers running the Blueprints plugin.",
+	"authors": ["Tedane"],
+	"license": "All-Rights-Reserved",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["dev.whizzle.blueprints.client.BlueprintsClient"]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

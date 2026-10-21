@@ -1,15 +1,38 @@
 construction:
-  # How often the builder wakes up.
+  # One cycle every half-second. Work is on the server thread.
   ticks-between-cycles: 10
-  # Maximum blocks placed per cycle across each active job.
-  blocks-per-cycle: 1
-  # If false, chunks are never force-loaded. A job pauses when its origin/chest chunks unload.
-  keep-chunks-loaded: false
+  # Global attempt budget across all jobs, clamped to 1..16.
+  # Each job gets at most one step per cycle; a door is one two-block step.
+  steps-per-cycle: 1
+  # Concurrent unfinished jobs, server-wide (1-64) and per player. Each job also needs its own Builder's Chest.
+  max-active-jobs: 16
+  max-active-jobs-per-player: 2
 
-labor-fee:
-  # Optional extra survival cost. 0 means materials-only.
-  emeralds: 0
+builders-chest:
+  # How far /blueprint start searches for your own Builder's Chest, in blocks from you (1-64).
+  search-radius: 16
+  # Shaped crafting recipe. 1-3 rows of equal length (up to 3 characters); a space is an empty slot.
+  # Each letter maps to an item id. Each active build needs its own chest, so this sets the cost of parallel builds.
+  recipe:
+    shape: ["PIP", "ICI", "PIP"]
+    ingredients:
+      P: paper
+      I: iron_ingot
+      C: chest
 
-safety:
-  # V0 refuses to replace non-air blocks unless they already match the blueprint.
-  overwrite-existing-blocks: false
+limits:
+  # Largest blueprint, in blocks (1-32768), and longest side, in blocks (1-128). Applies to capture, import,
+  # upload, and starting builds; restart the server after changing. Larger plans make jobs.yml bigger and
+  # Creative capture scans more cells, so raise them gradually. Lowering them makes existing larger blueprints
+  # and jobs fail to load (they are kept on disk).
+  max-blocks: 4096
+  max-span: 65
+
+uploads:
+  # Largest .litematic the client mod may upload, in kilobytes (64-8192).
+  max-kilobytes: 2048
+  # true: every player may upload from the client mod. false: only players with blueprints.upload (op by default).
+  allow-everyone: false
+  # Most blueprints one player may own (captures and uploads both count); 0 = no cap. Operators
+  # (blueprints.admin) have no cap. Players can delete their own blueprints to make room.
+  max-per-player: 10

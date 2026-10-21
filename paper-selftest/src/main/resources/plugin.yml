@@ -1,0 +1,6 @@
+name: BlueprintsSelfTest
+version: dev
+main: dev.whizzle.blueprints.selftest.SelfTestPlugin
+api-version: '26.2'
+depend: [Blueprints]
+description: Development-only checks of Blueprints against real Paper block data.
