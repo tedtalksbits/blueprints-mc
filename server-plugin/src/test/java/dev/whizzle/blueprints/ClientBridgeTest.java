@@ -188,8 +188,28 @@ class ClientBridgeTest {
         assertTrue(request(ClientBridge.UPLOAD_BEGIN, new Wire.Writer().utf("junk").varInt(junk.length), ClientBridge.UPLOAD_READY).bool());
         sendChunks(junk, 1000);
         Wire.Reader done = request(ClientBridge.UPLOAD_END, new Wire.Writer(), ClientBridge.RESULT);
-        assertFalse(done.bool()); assertTrue(done.utf(1000).contains("isn't a readable"));
+        assertFalse(done.bool()); assertTrue(done.utf(1000).contains("Invalid blueprint YAML"));
         assertTrue(repository.get("junk").isEmpty());
+    }
+    @Test void uploadAcceptsABlueprintYamlAndIgnoresItsEmbeddedIdAndOwner() throws Exception {
+        String yaml = "id: something-else\nname: Hut\nowner:\n  uuid: 00000000-0000-0000-0000-000000000001\n  name: Mallory\n"
+            + "blocks:\n- {x: 0, y: 0, z: 0, block-data: 'minecraft:stone'}\n- {x: 1, y: 0, z: 0, block-data: 'minecraft:oak_planks'}\n";
+        byte[] file = yaml.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(request(ClientBridge.UPLOAD_BEGIN, new Wire.Writer().utf("hut").varInt(file.length), ClientBridge.UPLOAD_READY).bool());
+        sendChunks(file, 50);
+        Wire.Reader done = request(ClientBridge.UPLOAD_END, new Wire.Writer(), ClientBridge.RESULT);
+        assertTrue(done.bool(), done.utf(1000));
+        BlueprintRepository fresh = new BlueprintRepository(plugin); fresh.load();
+        assertEquals(2, fresh.get("hut").orElseThrow().blockCount());
+        assertTrue(fresh.get("something-else").isEmpty());
+        assertEquals(player.getUniqueId(), fresh.owner("hut").orElseThrow().id());
+    }
+    @Test void uploadedYamlWithUnsupportedBlocksIsRejected() {
+        byte[] file = "blocks:\n- {x: 0, y: 0, z: 0, block-data: 'minecraft:chest'}\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(request(ClientBridge.UPLOAD_BEGIN, new Wire.Writer().utf("bad").varInt(file.length), ClientBridge.UPLOAD_READY).bool());
+        sendChunks(file, 1000);
+        assertFalse(request(ClientBridge.UPLOAD_END, new Wire.Writer(), ClientBridge.RESULT).bool());
+        assertTrue(repository.get("bad").isEmpty());
     }
     @Test void floodingIsRateLimited() {
         sent.clear();

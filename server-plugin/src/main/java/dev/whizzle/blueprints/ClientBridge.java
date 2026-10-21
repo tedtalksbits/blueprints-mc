@@ -231,13 +231,20 @@ public final class ClientBridge implements PluginMessageListener {
         try {
             String cap = policy.capProblem(player, repository);
             if (cap != null) { result(player, false, cap); return; }
+            if (!BlueprintRepository.isGzip(upload.data)) {
+                ConstructionPlan plan = BlueprintRepository.fromYaml(upload.data, upload.id);
+                repository.saveNew(plan, BlueprintPolicy.ownerOf(player));
+                result(player, true, "Uploaded " + plan.id() + " (" + plan.blockCount() + " blocks).");
+                catalog(player);
+                return;
+            }
             LitematicImport.Result imported = LitematicImport.read(upload.data, upload.id);
             repository.saveNew(imported.plan(), BlueprintPolicy.ownerOf(player));
             String notes = LitematicImport.notes(imported);
             result(player, true, "Uploaded " + imported.plan().id() + " (" + imported.plan().blockCount() + " blocks)." + (notes.isEmpty() ? "" : " " + notes));
             catalog(player);
         } catch (java.io.IOException e) {
-            result(player, false, "That file isn't a readable .litematic (" + e.getMessage() + ").");
+            result(player, false, "That file isn't a readable .litematic or blueprint .yml (" + e.getMessage() + ").");
         } catch (IllegalArgumentException | IllegalStateException | ArithmeticException e) {
             result(player, false, "Upload failed: " + e.getMessage());
         }

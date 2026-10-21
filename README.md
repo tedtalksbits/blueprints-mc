@@ -76,7 +76,7 @@ Install: Fabric Loader for 26.2, plus `fabric-api-0.161.0+26.2.jar` and `bluepri
 
 | Key (rebindable) | Action |
 |---|---|
-| `B` | Open Blueprints: choose a blueprint, see needed vs. in-chest materials, opacity, start, your builds, cancel, **Capture new...** (Creative), **Upload .litematic...**, **Delete** (your own blueprints) |
+| `B` | Open Blueprints: choose a blueprint, see needed vs. in-chest materials, opacity, start, your builds, cancel, **Capture new...** (Creative), **Upload file...**, **Delete** (your own blueprints) |
 | Arrow keys | Move the preview away / closer / left / right, relative to where you face (hold to repeat) |
 | `Page Up` / `Page Down` | Move up / down |
 | `G` | Move the preview to the block under your crosshair |
@@ -84,7 +84,7 @@ Install: Fabric Loader for 26.2, plus `fabric-api-0.161.0+26.2.jar` and `bluepri
 | `Enter` | Start the build here (uses your nearest free Builder's Chest) |
 | `Backspace` | Close the preview |
 
-**Upload .litematic...** lists files in your `.minecraft/schematics` folder (where Litematica saves; subfolders included). Pick one, name it, upload; the server imports it with the same rules as `/blueprint import` (needs `blueprints.upload`, op by default, or `uploads.allow-everyone: true`; size limit `uploads.max-kilobytes`).
+**Upload file...** lists `.litematic` files and blueprint `.yml`/`.yaml` files (the format Creative capture writes) in your `.minecraft/schematics` folder (where Litematica saves; subfolders included). Pick one, name it, upload; the server imports it with the same rules as `/blueprint import` (needs `blueprints.upload`, op by default, or `uploads.allow-everyone: true`; size limit `uploads.max-kilobytes`). A YAML upload is validated like any blueprint (supported blocks only, `limits.*`); the `id` and `owner` inside the file are ignored in favor of the name you pick and your account.
 
 **Ownership.** Whoever captures or uploads a blueprint owns it; the menu shows "by <name>". Owners see a **Delete** button on their own blueprints (operators on all of them). Deleted files move to `plugins/Blueprints/blueprints/trash/`; move one back and restart to restore it. Builds already running from a deleted blueprint finish normally. Each player may own up to `uploads.max-per-player` blueprints (default 10; operators have no cap); the menu shows "Yours: 3 / 10" and disables Upload/Capture when full. Blueprints from before this feature, and ones placed by hand in the folder, have no owner, so only operators can delete them. Command: `/blueprint delete <id>`.
 

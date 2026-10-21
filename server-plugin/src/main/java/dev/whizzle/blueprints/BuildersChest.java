@@ -151,14 +151,21 @@ public final class BuildersChest implements Listener {
     public void onPlace(BlockPlaceEvent event) {
         if (isItem(event.getItemInHand()) && event.getBlockPlaced().getState() instanceof Chest chest) claim(chest, event.getPlayer());
     }
-    // Return the Builder's Chest item instead of a plain chest. Contents drop as for any chest.
+    // Return the Builder's Chest item instead of a plain chest, and always hand back the stored materials.
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
     public void onBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
-        if (!event.isDropItems() || !isBuildersChest(block)) return;
+        if (!isBuildersChest(block)) return;
+        Location at = new Location(block.getWorld(), block.getX() + 0.5, block.getY() + 0.5, block.getZ() + 0.5);
+        if (block.getState() instanceof Chest chest) {
+            var inventory = chest.getBlockInventory();
+            for (ItemStack stack : inventory.getContents())
+                if (stack != null && !stack.getType().isAir()) block.getWorld().dropItemNaturally(at, stack.clone());
+            inventory.clear();
+        }
+        if (!event.isDropItems()) return;
         event.setDropItems(false);
-        if (event.getPlayer().getGameMode() != GameMode.CREATIVE)
-            block.getWorld().dropItemNaturally(new Location(block.getWorld(), block.getX() + 0.5, block.getY() + 0.5, block.getZ() + 0.5), item());
+        if (event.getPlayer().getGameMode() != GameMode.CREATIVE) block.getWorld().dropItemNaturally(at, item());
     }
     @EventHandler(ignoreCancelled = true)
     public void onEntityExplode(EntityExplodeEvent event) { event.blockList().removeIf(BuildersChest::isBuildersChest); }

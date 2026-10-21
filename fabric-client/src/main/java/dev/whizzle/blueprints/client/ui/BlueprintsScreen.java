@@ -54,7 +54,7 @@ public final class BlueprintsScreen extends Screen {
 		Tooltip fullTip = Tooltip.create(Component.literal("You have " + s().catalogInfo.owned() + " of " + s().catalogInfo.limit()
 			+ " blueprints allowed on this server. Delete one of yours to add another."));
 		if (s().welcome != null && s().welcome.canUpload()) {
-			Button upload = addRenderableWidget(Button.builder(Component.literal("Upload .litematic..."), b -> minecraft.gui.setScreen(new UploadScreen(this)))
+			Button upload = addRenderableWidget(Button.builder(Component.literal("Upload file..."), b -> minecraft.gui.setScreen(new UploadScreen(this)))
 				.pos(10, height - 52).size(LIST_WIDTH, 20).build());
 			if (full) { upload.active = false; upload.setTooltip(fullTip); }
 		}

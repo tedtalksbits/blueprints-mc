@@ -161,8 +161,28 @@ public final class BlueprintRepository {
         catch (IllegalArgumentException e) { return null; }
     }
 
-    private BlueprintDefinition parse(YamlConfiguration yml, File file) {
-        String id = Objects.requireNonNullElse(yml.getString("id"), stripExtension(file.getName()));
+    /**
+     * Reads an uploaded blueprint YAML (the format capture writes) under the given id. Any id/owner inside the
+     * file is ignored; the result still goes through {@link PlanCompiler} before it can be saved.
+     */
+    public static ConstructionPlan fromYaml(byte[] data, String id) {
+        YamlConfiguration yml = new YamlConfiguration();
+        try { yml.loadFromString(new String(data, StandardCharsets.UTF_8)); }
+        catch (Exception e) { throw new IllegalArgumentException("Invalid blueprint YAML: " + e.getMessage(), e); }
+        BlueprintDefinition parsed = parse(yml, id);
+        return PlanCompiler.compile(parsed);
+    }
+
+    /** True when the bytes are a gzip stream (.litematic); anything else is treated as blueprint YAML. */
+    public static boolean isGzip(byte[] data) {
+        return data.length > 2 && (data[0] & 0xFF) == 0x1F && (data[1] & 0xFF) == 0x8B;
+    }
+
+    private static BlueprintDefinition parse(YamlConfiguration yml, File file) {
+        return parse(yml, Objects.requireNonNullElse(yml.getString("id"), stripExtension(file.getName())));
+    }
+
+    private static BlueprintDefinition parse(YamlConfiguration yml, String id) {
         String name = Objects.requireNonNullElse(yml.getString("name"), id);
         List<?> raw = Objects.requireNonNull(yml.getList("blocks"), "Missing blocks list");
         List<BlueprintBlock> blocks = new ArrayList<>(raw.size());

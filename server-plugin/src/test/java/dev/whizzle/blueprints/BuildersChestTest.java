@@ -60,6 +60,12 @@ class BuildersChestTest {
         assertFalse(event.isDropItems());
         assertTrue(world.getEntities().stream().anyMatch(e -> e instanceof Item item && BuildersChest.isItem(item.getItemStack())));
     }
+    @Test void breakingDropsTheStoredMaterials() {
+        Chest chest = claimedAt(1, 65, 0, player);
+        chest.getBlockInventory().addItem(new ItemStack(Material.STONE, 5));
+        server.getPluginManager().callEvent(new BlockBreakEvent(world.getBlockAt(1, 65, 0), player));
+        assertTrue(world.getEntities().stream().anyMatch(e -> e instanceof Item item && item.getItemStack().getType() == Material.STONE && item.getItemStack().getAmount() == 5));
+    }
     @Test void startUsesTheNearestOwnBuildersChestAndIgnoresOthers() {
         chestAt(-1, 65, 0);                          // plain chest, closest
         claimedAt(-1, 65, 1, other);    // someone else's Builder's Chest

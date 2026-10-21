@@ -113,6 +113,16 @@ public final class BuildManager {
         }
     }
     private void pause(BuildJob job, BuildJob.State state, String reason) { job.state(state, reason); }
+    private static String at(Block b) { return b.getX() + "," + b.getY() + "," + b.getZ(); }
+    // Grass, flowers, snow layers etc. are overwritten without drops; liquids still count as obstructions.
+    private static boolean clearable(Block b) { return b.isReplaceable() && !b.isLiquid(); }
+    private static void clearPlant(Block b) {
+        if (b.getType().isAir() || !clearable(b)) return;
+        if (b.getBlockData() instanceof org.bukkit.block.data.Bisected bisected) {
+            Block other = b.getRelative(bisected.getHalf() == org.bukkit.block.data.Bisected.Half.BOTTOM ? org.bukkit.block.BlockFace.UP : org.bukkit.block.BlockFace.DOWN);
+            if (other.getType() == b.getType()) other.setType(Material.AIR, false);
+        }
+    }
     private void placeNext(BuildJob job) {
         World world = Bukkit.getWorld(job.world());
         if (world == null) { pause(job, BuildJob.State.PAUSED_CHUNK, "World unavailable"); return; }
@@ -144,10 +154,16 @@ public final class BuildManager {
             if (targets.get(i).getBlockData().getAsString().equals(expected.get(i).getAsString())) matches++;
         }
         if (matches == targets.size()) { job.advance(); return; }
-        // A partly existing door is ambiguous: never create a free half or charge again for it.
-        if (matches > 0 || targets.stream().anyMatch(b -> !b.getType().isAir())) {
-            pause(job, BuildJob.State.PAUSED_OBSTRUCTION, "Destination occupied or door partially present at "
-                + targets.getFirst().getX() + "," + targets.getFirst().getY() + "," + targets.getFirst().getZ()); return;
+        if (matches > 0) {
+            Block first = targets.getFirst();
+            pause(job, BuildJob.State.PAUSED_OBSTRUCTION, "Door is only half built at " + at(first) + " - break the remaining half to resume"); return;
+        }
+        for (int i = 0; i < targets.size(); i++) {
+            Block target = targets.get(i);
+            if (!target.getType().isAir() && !clearable(target)) {
+                pause(job, BuildJob.State.PAUSED_OBSTRUCTION, "Blocked by " + target.getType().name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ')
+                    + " at " + at(target) + " - remove it to resume"); return;
+            }
         }
         Block chestBlock = world.getBlockAt(job.chestX(), job.chestY(), job.chestZ());
         if (!(chestBlock.getState() instanceof Chest chest)) { pause(job, BuildJob.State.PAUSED_OBSTRUCTION, "Builder's chest missing"); return; }
@@ -156,6 +172,7 @@ public final class BuildManager {
             pause(job, BuildJob.State.PAUSED_MATERIALS, "Missing " + step.amount() + " " + step.material() + " (plain items only)"); return;
         }
         // Same main-thread step for both door halves. No neighbor physics or imported block entities.
+        for (Block target : targets) clearPlant(target);
         for (int i = 0; i < targets.size(); i++) targets.get(i).setBlockData(expected.get(i), false);
         for (int i = 0; i < targets.size(); i++) {
             if (!targets.get(i).getBlockData().getAsString().equals(expected.get(i).getAsString()))

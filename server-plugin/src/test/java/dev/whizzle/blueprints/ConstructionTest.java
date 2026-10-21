@@ -89,6 +89,18 @@ class ConstructionTest {
         assertEquals(BuildJob.State.COMPLETE, job.state()); assertTrue(chest.getBlockInventory().isEmpty());
         assertEquals(Bukkit.createBlockData(upper.blockData()).getAsString(), world.getBlockAt(2, 66, 2).getBlockData().getAsString());
     }
+    @Test void replaceablePlantsAreClearedAndSolidBlocksPauseWithAClearMessage() {
+        world.getBlockAt(2, 65, 2).setType(Material.SHORT_GRASS);
+        BuildJob job = start(plan(stone(0))); put(Material.STONE, 1);
+        manager.tick();
+        assertEquals(BuildJob.State.COMPLETE, job.state());
+        assertEquals(Material.STONE, world.getBlockAt(2, 65, 2).getType());
+        world.getBlockAt(2, 65, 2).setType(Material.DIRT);
+        BuildJob blocked = start(plan(stone(0))); put(Material.STONE, 1);
+        manager.tick();
+        assertEquals(BuildJob.State.PAUSED_OBSTRUCTION, blocked.state());
+        assertEquals("Blocked by dirt at 2,65,2 - remove it to resume", blocked.pauseReason());
+    }
     @Test void uncleanRestartNeverReplaysEvenWhenCursorIsStale() {
         BuildJob job = start(plan(stone(0), stone(1))); put(Material.STONE, 2); manager.tick();
         // The on-disk dirty snapshot still has cursor zero; a crash cannot make this a free/repeated placement.

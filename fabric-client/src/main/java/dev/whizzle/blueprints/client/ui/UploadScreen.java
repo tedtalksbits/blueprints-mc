@@ -31,16 +31,26 @@ public final class UploadScreen extends Screen {
 	private Button upload;
 
 	public UploadScreen(Screen parent) {
-		super(Component.literal("Upload a .litematic"));
+		super(Component.literal("Upload a .litematic or blueprint .yml"));
 		this.parent = parent;
 		this.folder = Minecraft.getInstance().gameDirectory.toPath().resolve("schematics");
+	}
+
+	private static boolean supported(Path p) {
+		String n = p.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+		return (n.endsWith(".litematic") || n.endsWith(".yml") || n.endsWith(".yaml")) && Files.isRegularFile(p);
+	}
+
+	static String suggestedName(String fileName) {
+		String base = fileName.substring(0, fileName.lastIndexOf('.') < 0 ? fileName.length() : fileName.lastIndexOf('.'));
+		return base.startsWith("blueprint-") && base.length() > "blueprint-".length() ? base.substring("blueprint-".length()) : base;
 	}
 
 	private void scan() {
 		List<Path> found = new ArrayList<>();
 		if (Files.isDirectory(folder)) {
 			try (Stream<Path> walk = Files.walk(folder, 4)) {
-				walk.filter(p -> p.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".litematic") && Files.isRegularFile(p))
+				walk.filter(UploadScreen::supported)
 					.sorted(Comparator.comparing(UploadScreen::modified).reversed()).forEach(found::add);
 			} catch (IOException ignored) { }
 		}
@@ -63,8 +73,7 @@ public final class UploadScreen extends Screen {
 			label = font.plainSubstrByWidth(label, LIST_WIDTH - 60) + "  " + Math.max(1, sizeOf(file) >> 10) + " KB";
 			addRenderableWidget(Button.builder(Component.literal(file.equals(chosen) ? "> " + label + " <" : label), b -> {
 				chosen = file;
-				String base = file.getFileName().toString();
-				name.setValue(base.substring(0, base.length() - ".litematic".length()));
+				name.setValue(suggestedName(file.getFileName().toString()));
 				rebuildWidgets();
 			}).pos(10, 30 + (i - page * perPage) * ROW).size(LIST_WIDTH, 20).build());
 		}
@@ -99,9 +108,9 @@ public final class UploadScreen extends Screen {
 		g.centeredText(font, title.getString(), width / 2, 10, Hud.WHITE);
 		int x = LIST_WIDTH + 30;
 		if (files.isEmpty()) {
-			g.text(font, "No .litematic files found in:", 10, 30, Hud.GRAY);
+			g.text(font, "No .litematic or .yml files found in:", 10, 30, Hud.GRAY);
 			g.text(font, font.plainSubstrByWidth(folder.toString(), LIST_WIDTH + 10), 10, 42, Hud.GRAY);
-			g.text(font, "Save with Litematica, or copy files there, then Refresh.", 10, 58, Hud.GRAY);
+			g.text(font, "Save with Litematica or copy files there, then Refresh.", 10, 58, Hud.GRAY);
 		}
 		g.text(font, chosen == null ? "Choose a file on the left." : "File: " + chosen.getFileName(), x, 30, chosen == null ? Hud.GRAY : Hud.WHITE);
 		String id = Messages.toId(name.getValue());
