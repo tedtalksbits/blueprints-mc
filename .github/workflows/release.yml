@@ -1,0 +1,29 @@
+name: Release
+# Push a tag like v0.3.0 to build both jars and publish them as a GitHub release.
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and test plugin
+        run: ./gradlew :server-plugin:build --no-daemon
+      - name: Build and test client
+        working-directory: fabric-client
+        run: ./gradlew build --no-daemon
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --generate-notes --title "Blueprints $GITHUB_REF_NAME" \
+            server-plugin/build/libs/*.jar \
+            fabric-client/build/libs/blueprints-client-*[0-9].jar
