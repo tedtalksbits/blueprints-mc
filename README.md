@@ -16,7 +16,7 @@ Install **JDK 25**, set `JAVA_HOME`, then run the checked-in Gradle 9.1.0 wrappe
 ./gradlew build
 ```
 
-The first build downloads Gradle and Maven dependencies. Gradle's distribution is SHA-256 pinned, and the Paper API is pinned to `26.2.build.130-stable`. The plugin JAR is `server-plugin/build/libs/server-plugin-0.3.0-SNAPSHOT.jar`. Test reports are in `server-plugin/build/reports/tests/test/index.html`.
+The first build downloads Gradle and Maven dependencies. Gradle's distribution is SHA-256 pinned, and the Paper API is pinned to `26.2.build.130-stable`. The plugin JAR is `server-plugin/build/libs/server-plugin-0.3.0.jar`. Test reports are in `server-plugin/build/reports/tests/test/index.html`.
 
 ## Try the vertical slice
 

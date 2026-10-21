@@ -5,7 +5,7 @@
 	"name": "Blueprints",
 	"description": "Preview, position, rotate, and start Survival-funded builds on servers running the Blueprints plugin.",
 	"authors": ["Tedane"],
-	"license": "All-Rights-Reserved",
+	"license": "MIT",
 	"environment": "client",
 	"entrypoints": {
 		"client": ["dev.whizzle.blueprints.client.BlueprintsClient"]
