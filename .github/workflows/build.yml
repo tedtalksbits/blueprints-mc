@@ -20,7 +20,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
         with:
           build-root-directory: fabric-client
       - run: ./gradlew build --no-daemon
@@ -36,7 +36,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - run: ./gradlew build --no-daemon
       - uses: actions/upload-artifact@v4
         with:
