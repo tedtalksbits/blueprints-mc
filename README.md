@@ -2,7 +2,7 @@
 
 **Design in Creative. Earn it in Survival.**
 
-A Paper 26.2 plugin that builds a small, server-installed blueprint gradually from real materials in a Builder's Chest. This first slice focuses on exact block states and survival accounting; `.litematic` import and a Fabric client preview are supported.
+A Paper 26.3 plugin that builds a small, server-installed blueprint gradually from real materials in a Builder's Chest. This first slice focuses on exact block states and survival accounting; `.litematic` import and a Fabric client preview are supported.
 
 ## Build
 
@@ -16,11 +16,11 @@ Install **JDK 25**, set `JAVA_HOME`, then run the checked-in Gradle 9.1.0 wrappe
 ./gradlew build
 ```
 
-The first build downloads Gradle and Maven dependencies. Gradle's distribution is SHA-256 pinned, and the Paper API is pinned to `26.2.build.130-stable`. The plugin JAR is `server-plugin/build/libs/server-plugin-0.3.0.jar`. Test reports are in `server-plugin/build/reports/tests/test/index.html`.
+The first build downloads Gradle and Maven dependencies. Gradle's distribution is SHA-256 pinned, and the Paper API is pinned to `26.3.build.211-stable`. The plugin JAR is `server-plugin/build/libs/server-plugin-0.3.1.jar`. Test reports are in `server-plugin/build/reports/tests/test/index.html`.
 
 ## Try the vertical slice
 
-Use a separate Paper 26.2 test server running Java 25. Stop it, copy the JAR into `plugins/`, and start it normally. Blueprints installs `plugins/Blueprints/blueprints/orientation-demo.yml` on its first run. Existing files are preserved; remove an older demo file while stopped if you want the expanded example installed.
+Use a separate Paper 26.3 test server running Java 25. Stop it, copy the JAR into `plugins/`, and start it normally. Blueprints installs `plugins/Blueprints/blueprints/orientation-demo.yml` on its first run. Existing files are preserved; remove an older demo file while stopped if you want the expanded example installed.
 
 1. As an operator in **Survival**, craft a **Builder's Chest** (see below) or run `/blueprint givechest`, and place it next to an empty 5x5 area. The example occupies offsets `(0..4, 0..2, 0..4)` from your chosen origin.
 2. Run `/blueprint materials orientation-demo`.
@@ -70,9 +70,9 @@ This mirrors the design's local X axis, then rotates it 90 degrees clockwise whe
 
 ## Fabric client (preview and place)
 
-The optional client mod for **Minecraft Java 26.2 + Fabric** adds a see-through preview you can move, rotate, and mirror before starting a build. The server stays in charge: the mod only proposes a blueprint, a spot, and an orientation, and the plugin runs the same checks as `/blueprint start`. Players without the mod keep using commands.
+The optional client mod for **Minecraft Java 26.3 + Fabric** adds a see-through preview you can move, rotate, and mirror before starting a build. The server stays in charge: the mod only proposes a blueprint, a spot, and an orientation, and the plugin runs the same checks as `/blueprint start`. Players without the mod keep using commands.
 
-Install: Fabric Loader for 26.2, plus `fabric-api-0.161.0+26.2.jar` and `blueprints-client-0.1.0.jar` in the instance's `mods` folder. `run/local-paper/build-and-install.cmd` builds the client too and copies both jars to `run/client-mods/`.
+Install: Fabric Loader for 26.3, plus `fabric-api-0.164.0+26.3.jar` and `blueprints-client-0.3.0.jar` in the instance's `mods` folder. `run/local-paper/build-and-install.cmd` builds the client too and copies both jars to `run/client-mods/`.
 
 | Key (rebindable) | Action |
 |---|---|
@@ -138,10 +138,10 @@ Jobs started before this feature keep using their original chest.
 
 V1 is for trusted test builders. It does **not** integrate claim protection or CoreProtect, emit synthetic player-placement events, or establish ownership of arbitrary chests. Builds can only draw from the starter's own Builder's Chest, but granting build permission still allows placement in otherwise protected areas. Do not grant it broadly on the existing multiplayer server yet.
 
-Supported blocks: about 836 block types on Paper 26.2, including all plain full blocks, stairs, slabs, walls, fences, gates, panes, bars, doors, trapdoors, logs and pillars, leaves, glass, carpets, torches, lanterns, chains, ladders, buttons, pressure plates, levers, flowers, saplings and tall plants, observers, and pistons. **Campfires, barrels, and signs** are built empty in their default state: contents, cooking slots, and sign text are never copied, so schematics can't duplicate items (barrels are placed closed). Rules are in `MaterialCost.java`; more item-holding blocks can be added to its `placedEmpty` list on request. Refused: other blocks that store contents or data (chests, furnaces, hoppers, banners, beds, heads), technical blocks (command blocks, spawners, barriers), fluids, rails and redstone wiring, crops and vines, and multi-count blocks (candles, sea pickles, petals, snow layers). Waterlogged and powered states are captured dry and unpowered, leaves are kept from decaying, and respawn anchors and composters are captured empty so a build never pays out stored materials.
+Supported blocks: about 836 block types on Paper 26.3, including all plain full blocks, stairs, slabs, walls, fences, gates, panes, bars, doors, trapdoors, logs and pillars, leaves, glass, carpets, torches, lanterns, chains, ladders, buttons, pressure plates, levers, flowers, saplings and tall plants, observers, and pistons. **Campfires, barrels, and signs** are built empty in their default state: contents, cooking slots, and sign text are never copied, so schematics can't duplicate items (barrels are placed closed). Rules are in `MaterialCost.java`; more item-holding blocks can be added to its `placedEmpty` list on request. Refused: other blocks that store contents or data (chests, furnaces, hoppers, banners, beds, heads), technical blocks (command blocks, spawners, barriers), fluids, rails and redstone wiring, crops and vines, and multi-count blocks (candles, sea pickles, petals, snow layers). Waterlogged and powered states are captured dry and unpowered, leaves are kept from decaying, and respawn anchors and composters are captured empty so a build never pays out stored materials.
 
 See [the acceptance test](docs/TESTING.md), [architecture and recovery semantics](docs/ARCHITECTURE.md), and [roadmap](docs/ROADMAP.md).
 
 ## New Minecraft versions
 
-Built for Minecraft/Paper 26.2. The plugin usually runs on later 26.x Paper unchanged; the client mod needs a rebuild for each Minecraft release. `docs/UPGRADING.md` is the step-by-step checklist.
+Built for Minecraft/Paper 26.3 (the plugin declares `api-version: 26.2`, so it also loads on 26.2 servers; the 0.3.x client is 26.3 only, and 0.2.0 is the last 26.2 client). The plugin usually runs on later 26.x Paper unchanged; the client mod needs a rebuild for each Minecraft release. `docs/UPGRADING.md` is the step-by-step checklist.

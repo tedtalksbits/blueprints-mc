@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * A short, rebindable set (Options > Controls > Blueprints). Everything except "open" only acts while a preview is
@@ -17,23 +16,23 @@ public final class Keys {
 
 	private Keys() {}
 
-	private static KeyMapping key(String name, int glfw) {
-		return KeyMappingHelper.registerKeyMapping(new KeyMapping("key.blueprints." + name, InputConstants.Type.KEYSYM, glfw, CATEGORY));
+	private static KeyMapping key(String name, int keyCode) {
+		return KeyMappingHelper.registerKeyMapping(new KeyMapping("key.blueprints." + name, InputConstants.Type.KEYBOARD, keyCode, CATEGORY));
 	}
 
 	public static void register() {
-		OPEN = key("open", GLFW.GLFW_KEY_B);
-		FORWARD = key("forward", GLFW.GLFW_KEY_UP);
-		BACK = key("back", GLFW.GLFW_KEY_DOWN);
-		LEFT = key("left", GLFW.GLFW_KEY_LEFT);
-		RIGHT = key("right", GLFW.GLFW_KEY_RIGHT);
-		UP = key("up", GLFW.GLFW_KEY_PAGE_UP);
-		DOWN = key("down", GLFW.GLFW_KEY_PAGE_DOWN);
-		ROTATE = key("rotate", GLFW.GLFW_KEY_R);
-		MIRROR = key("mirror", GLFW.GLFW_KEY_M);
-		HERE = key("here", GLFW.GLFW_KEY_G);
-		CONFIRM = key("confirm", GLFW.GLFW_KEY_ENTER);
-		HIDE = key("hide", GLFW.GLFW_KEY_BACKSPACE);
+		OPEN = key("open", InputConstants.KEY_B);
+		FORWARD = key("forward", InputConstants.KEY_UP);
+		BACK = key("back", InputConstants.KEY_DOWN);
+		LEFT = key("left", InputConstants.KEY_LEFT);
+		RIGHT = key("right", InputConstants.KEY_RIGHT);
+		UP = key("up", InputConstants.KEY_PAGEUP);
+		DOWN = key("down", InputConstants.KEY_PAGEDOWN);
+		ROTATE = key("rotate", InputConstants.KEY_R);
+		MIRROR = key("mirror", InputConstants.KEY_M);
+		HERE = key("here", InputConstants.KEY_G);
+		CONFIRM = key("confirm", InputConstants.KEY_RETURN);
+		HIDE = key("hide", InputConstants.KEY_BACKSPACE);
 	}
 
 	/** Compact label of the bound key: arrows as symbols, long names shortened ("PgUp", "Bksp"). */
