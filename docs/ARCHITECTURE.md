@@ -51,8 +51,8 @@ Persisted plans are recompiled on startup and checked against the snapshot, incl
 
 - [Paper project setup](https://docs.papermc.io/paper/dev/project-setup/): Minecraft 26.1+ uses `VERSION.build.N-stable` artifact versions instead of `-R0.1-SNAPSHOT`.
 - [Paper getting started](https://docs.papermc.io/paper/getting-started/): Java 25 for 26.1+.
-- [Paper 26.2 Block API](https://jd.papermc.io/paper/26.2/org/bukkit/block/Block.html): exact block data and the limitations of suppressing physics.
-- [Paper 26.2 release notes](https://papermc.io/news/26-2/): current version behavior and world storage context.
-- [MockBukkit](https://github.com/MockBukkit/MockBukkit/tree/minecraft/v26.2): test doubles for the 26.2 API. These do not simulate real server physics, disk saves, Geyser, or protection plugins.
+- [Paper 26.3 Block API](https://jd.papermc.io/paper/26.3/org/bukkit/block/Block.html): exact block data and the limitations of suppressing physics.
+- [Paper 26.3 release notes](https://papermc.io/news/26-3/): current version behavior and world storage context.
+- [MockBukkit](https://github.com/MockBukkit/MockBukkit/tree/minecraft/v26.3): test doubles for the 26.3 API. These do not simulate real server physics, disk saves, Geyser, or protection plugins.
 
 The future Fabric client should supply a normalized representation through a versioned, bounded protocol. It will not control accounting or placement. `.litematic` is an import format, not the persisted job model. Client implementation and Fabric-specific API research are intentionally deferred until the server acceptance test succeeds.

@@ -83,7 +83,7 @@ public final class UploadScreen extends Screen {
 		}
 		addRenderableWidget(Button.builder(Component.literal("Open folder"), b -> {
 			try { Files.createDirectories(folder); } catch (IOException ignored) { }
-			Util.getPlatform().openPath(folder);
+			openFolder(folder);
 		}).pos(10, height - 52).size(LIST_WIDTH / 2 - 2, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("Refresh"), b -> rebuildWidgets()).pos(10 + LIST_WIDTH / 2 + 2, height - 52).size(LIST_WIDTH / 2 - 2, 20).build());
 
@@ -98,6 +98,16 @@ public final class UploadScreen extends Screen {
 			.pos(x, 90).size(w / 2 - 2, 20).build());
 		upload.active = chosen != null && !Messages.toId(name.getValue()).isEmpty() && !Uploader.active();
 		addRenderableWidget(Button.builder(Component.literal("Back"), b -> onClose()).pos(x + w / 2 + 2, 90).size(w / 2 - 2, 20).build());
+	}
+
+	private static void openFolder(Path folder) {
+		String path = folder.toAbsolutePath().toString();
+		String[] command = switch (Util.getPlatform()) {
+			case WINDOWS -> new String[] {"explorer", path};
+			case OSX -> new String[] {"open", path};
+			default -> new String[] {"xdg-open", path};
+		};
+		try { new ProcessBuilder(command).start(); } catch (IOException ignored) { }
 	}
 
 	private static long sizeOf(Path p) { try { return Files.size(p); } catch (IOException e) { return 0; } }

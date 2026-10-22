@@ -1,16 +1,16 @@
 # Test plan: Creative → preview → Survival build
 
-What this covers: the full loop with the Fabric client. You design in Creative, save it from the menu, then in Survival you preview it, move, rotate and mirror it, fund it, and start it. Everything below was already exercised in a real 26.2 client against a real Paper server; this plan is for you to confirm it on your machine and judge the feel.
+What this covers: the full loop with the Fabric client. You design in Creative, save it from the menu, then in Survival you preview it, move, rotate and mirror it, fund it, and start it. Everything below was already exercised in a real 26.3 client against a real Paper server; this plan is for you to confirm it on your machine and judge the feel.
 
 ## Setup (once, about 10 minutes)
 
 1. Stop the test server (type `stop` in its console).
 2. Double-click `run\local-paper\build-and-install.cmd`. It builds and tests the plugin, installs it on the test server, builds the client mod, and copies two jars to `run\client-mods\`:
    - `blueprints-client-0.1.0.jar`
-   - `fabric-api-0.161.0+26.2.jar`
-3. Install Fabric for 26.2: download the installer from https://fabricmc.net/use/installer/, choose **Minecraft 26.2** and **Loader 0.19.5**, Install. The launcher gets a `fabric-loader-26.2` profile.
+   - `fabric-api-0.164.0+26.3.jar`
+3. Install Fabric for 26.3: download the installer from https://fabricmc.net/use/installer/, choose **Minecraft 26.3** and **Loader 0.19.5**, Install. The launcher gets a `fabric-loader-26.3` profile.
 4. Copy both jars from `run\client-mods\` into `%APPDATA%\.minecraft\mods\` (create the folder if it is missing).
-5. Start the server (`start.cmd`), launch the **fabric-loader-26.2** profile, join `127.0.0.1:25565`.
+5. Start the server (`start.cmd`), launch the **fabric-loader-26.3** profile, join `127.0.0.1:25565`.
 
 ## Tests
 
@@ -46,4 +46,4 @@ Screenshots of anything that looks wrong, plus anything that felt clunky: key ch
 2. **Size limits are now in `config.yml`** (`limits.max-blocks`, `limits.max-span`, `uploads.max-kilobytes`), with hard ceilings of 32,768 blocks and 128 per side.
 3. **Capture new...** is shown to anyone with capture permission; in Survival the server refuses with "Capture requires Creative mode".
 4. **Uploads are operator-only by default.** Set `uploads.allow-everyone: true` to open them to everyone; `uploads.max-per-player` (default 10) caps how many each player keeps. Operators can delete anyone's blueprint; deleted files go to `blueprints\trash\`.
-5. **The client needs Fabric for Minecraft 26.2.** Players without it keep using `/blueprint` commands.
+5. **The client needs Fabric for Minecraft 26.3.** Players without it keep using `/blueprint` commands.

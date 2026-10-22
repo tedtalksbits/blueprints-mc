@@ -2,7 +2,7 @@
 
 ## Automated
 
-Run `./gradlew build` (Windows: `.\gradlew.bat build`) with JDK 25. The JUnit suite uses MockBukkit 26.2 and exercises:
+Run `./gradlew build` (Windows: `.\gradlew.bat build`) with JDK 25. The JUnit suite uses MockBukkit 26.3 and exercises:
 
 - Exact orientation normalization, ordering, duplicate/bounds validation, door pairing, unsafe-state rejection.
 - Full material totals, double-slab cost, all-or-nothing debit, custom-item exclusion.
@@ -17,7 +17,7 @@ Passing these tests is not a live Paper/Geyser acceptance result. The first impl
 
 ## Manual acceptance (isolated server)
 
-1. Start a separate Paper 26.2 server with Java 25 and its normal operator-approved EULA/settings. Install the built JAR. Check the log for one loaded blueprint and no enable errors.
+1. Start a separate Paper 26.3 server with Java 25 and its normal operator-approved EULA/settings. Install the built JAR. Check the log for one loaded blueprint and no enable errors.
 2. Prepare a flat test area with air at the intended platform Y. Put a single chest outside the 5x5 footprint and remain close to it in Survival as an operator.
 3. Start `orientation-demo` with an **empty chest**. Verify `PAUSED_MATERIALS`, no placed blocks, and no inventory changes.
 4. Supply only 5 stone bricks. Verify exactly five platform blocks appear and construction pauses. Supply 20 more stone bricks, 4 stairs, 3 logs, 4 slabs, 1 trapdoor, and 1 door.
