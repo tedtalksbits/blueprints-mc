@@ -60,10 +60,12 @@ class LitematicImportTest {
         else if (v instanceof List<?> l) { out.writeByte(l.isEmpty() ? 0 : type(l.getFirst())); out.writeInt(l.size()); for (Object o : l) writeTag(out, o); }
         else if (v instanceof String s) out.writeUTF(s);
         else if (v instanceof Integer i) out.writeInt(i);
+        else if (v instanceof Short s) out.writeShort(s);
+        else if (v instanceof byte[] a) { out.writeInt(a.length); out.write(a); }
         else if (v instanceof long[] a) { out.writeInt(a.length); for (long x : a) out.writeLong(x); }
         else throw new IllegalArgumentException(String.valueOf(v));
     }
-    static int type(Object v) { return v instanceof Map ? 10 : v instanceof List ? 9 : v instanceof String ? 8 : v instanceof Integer ? 3 : v instanceof long[] ? 12 : -1; }
+    static int type(Object v) { return v instanceof Map ? 10 : v instanceof List ? 9 : v instanceof String ? 8 : v instanceof Integer ? 3 : v instanceof Short ? 2 : v instanceof byte[] ? 7 : v instanceof long[] ? 12 : -1; }
     Path write(String fileName, Map<String, Object> root) throws IOException {
         Path dir = plugin.getDataFolder().toPath().resolve("import"); Files.createDirectories(dir);
         Path file = dir.resolve(fileName);
@@ -147,5 +149,70 @@ class LitematicImportTest {
     @Test void idFromFileSanitizes() {
         assertEquals("my_house-v2", BlueprintCommand.idFromFile("My_House.v2.litematic"));
         assertEquals("castle", BlueprintCommand.idFromFile("--Castle.litematic"));
+        assertEquals("tower", BlueprintCommand.idFromFile("Tower.schem"));
+    }
+
+    // ---- Sponge .schem ----
+    static byte[] varints(int... values) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        for (int v : values) { while ((v & ~0x7F) != 0) { out.write((v & 0x7F) | 0x80); v >>>= 7; } out.write(v); }
+        return out.toByteArray();
+    }
+    /** index = x + z*w + y*w*l */
+    static Map<String, Object> sponge(int version, int w, int h, int l, Map<String, Integer> palette, int[] values) {
+        Map<String, Object> pal = new LinkedHashMap<>(palette);
+        Map<String, Object> root = new LinkedHashMap<>();
+        if (version == 2) {
+            root.put("Version", 2); root.put("DataVersion", 4903);
+            root.put("Width", (short) w); root.put("Height", (short) h); root.put("Length", (short) l);
+            root.put("Palette", pal); root.put("PaletteMax", palette.size()); root.put("BlockData", varints(values));
+            return root;
+        }
+        Map<String, Object> blocks = new LinkedHashMap<>(); blocks.put("Palette", pal); blocks.put("Data", varints(values));
+        Map<String, Object> schem = new LinkedHashMap<>();
+        schem.put("Version", 3); schem.put("DataVersion", 4903);
+        schem.put("Width", (short) w); schem.put("Height", (short) h); schem.put("Length", (short) l); schem.put("Blocks", blocks);
+        root.put("Schematic", schem);
+        return root;
+    }
+    @Test void spongeV2AndV3DecodeInYzxOrder() throws Exception {
+        Map<String, Integer> palette = new LinkedHashMap<>();
+        palette.put("minecraft:air", 0); palette.put("minecraft:stone", 1); palette.put("minecraft:oak_stairs[facing=north,half=bottom]", 2);
+        int[] values = {1, 0, 2, 1, 1, 0, 0, 1}; // 2x2x2: y0 = [1,0 / 2,1], y1 = [1,0 / 0,1]
+        for (int version : new int[]{2, 3}) {
+            Path file = write("a" + version + ".schem", sponge(version, 2, 2, 2, palette, values));
+            var result = LitematicImport.read(file, "a" + version);
+            var blocks = byPosition(result.plan());
+            assertEquals(5, result.plan().blockCount(), "v" + version);
+            assertTrue(blocks.get("0,0,0").contains("stone"));
+            assertNull(blocks.get("1,0,0"));
+            assertTrue(blocks.get("0,0,1").contains("oak_stairs"), blocks.toString());
+            assertTrue(blocks.get("1,0,1").contains("stone"));
+            assertTrue(blocks.get("0,1,0").contains("stone"));
+            assertTrue(blocks.get("1,1,1").contains("stone"));
+        }
+    }
+    @Test void spongePalettesOver127UseMultiByteVarints() throws Exception {
+        Map<String, Integer> palette = new LinkedHashMap<>();
+        palette.put("minecraft:air", 0);
+        for (int i = 1; i < 200; i++) palette.put(i == 150 ? "minecraft:stone" : "minecraft:unknown_block_" + i, i);
+        Path file = write("big.schem", sponge(2, 1, 1, 2, palette, new int[]{150, 0}));
+        var result = LitematicImport.read(file, "big");
+        assertEquals(1, result.plan().blockCount());
+    }
+    @Test void spongeUnsupportedAndCorruptDataFailCleanly() throws Exception {
+        Map<String, Integer> palette = new LinkedHashMap<>(); palette.put("minecraft:air", 0); palette.put("minecraft:chest", 1);
+        Path chest = write("chest.schem", sponge(2, 1, 1, 1, palette, new int[]{1}));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> LitematicImport.read(chest, "c")).getMessage().contains("No supported blocks"));
+        Path truncated = write("short.schem", sponge(2, 2, 1, 1, palette, new int[]{0}));
+        assertThrows(IllegalArgumentException.class, () -> LitematicImport.read(truncated, "t"));
+        Path old = write("old.schem", new LinkedHashMap<>(Map.of("Version", 1)));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> LitematicImport.read(old, "o")).getMessage().contains("Unsupported"));
+    }
+    @Test void importCommandAcceptsSchemFiles() throws Exception {
+        Map<String, Integer> palette = new LinkedHashMap<>(); palette.put("minecraft:air", 0); palette.put("minecraft:stone", 1);
+        write("Tower.schem", sponge(2, 1, 1, 1, palette, new int[]{1}));
+        assertTrue(server.dispatchCommand(player, "blueprint import Tower"));
+        assertTrue(player.nextMessage().contains("Imported tower"));
     }
 }

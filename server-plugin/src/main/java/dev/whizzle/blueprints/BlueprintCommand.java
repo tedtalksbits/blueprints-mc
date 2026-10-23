@@ -47,7 +47,10 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
             case "import" -> {
                 if (!sender.hasPermission("blueprints.import")) { sender.sendMessage("§cYou don't have permission."); return true; }
                 if (args.length < 2 || args.length > 3) { sender.sendMessage("§e/blueprint import <file> [id]"); return true; }
-                String fileName = args[1].toLowerCase(Locale.ROOT).endsWith(".litematic") ? args[1] : args[1] + ".litematic";
+                String lower = args[1].toLowerCase(Locale.ROOT);
+                String fileName = lower.endsWith(".litematic") || lower.endsWith(".schem") ? args[1]
+                    : Files.isRegularFile(importDirectory.resolve(args[1] + ".schem")) && !Files.isRegularFile(importDirectory.resolve(args[1] + ".litematic"))
+                        ? args[1] + ".schem" : args[1] + ".litematic";
                 Path file = importDirectory.resolve(fileName).normalize();
                 if (!fileName.matches("[A-Za-z0-9_.()+-]{1,128}") || !importDirectory.equals(file.getParent())) {
                     sender.sendMessage("§cUse a plain file name from plugins/Blueprints/import."); return true;
@@ -163,14 +166,14 @@ public final class BlueprintCommand implements CommandExecutor, TabCompleter {
 
     /** File name to a valid blueprint id: lowercase, invalid characters to '-', at most 64 characters. */
     static String idFromFile(String fileName) {
-        String base = fileName.substring(0, fileName.length() - ".litematic".length()).toLowerCase(Locale.ROOT)
+        String base = fileName.substring(0, fileName.lastIndexOf('.')).toLowerCase(Locale.ROOT)
             .replaceAll("[^a-z0-9_-]+", "-").replaceAll("^[^a-z0-9]+", "");
         return base.length() > 64 ? base.substring(0, 64) : base;
     }
 
     private List<String> importFiles() {
         try (Stream<Path> files = Files.list(importDirectory)) {
-            return files.map(p -> p.getFileName().toString()).filter(n -> n.toLowerCase(Locale.ROOT).endsWith(".litematic")).sorted().toList();
+            return files.map(p -> p.getFileName().toString()).filter(n -> n.toLowerCase(Locale.ROOT).endsWith(".litematic") || n.toLowerCase(Locale.ROOT).endsWith(".schem")).sorted().toList();
         } catch (IOException e) { return List.of(); }
     }
 

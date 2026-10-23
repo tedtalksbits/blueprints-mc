@@ -53,8 +53,71 @@ public final class LitematicImport {
         return out.toString();
     }
 
-    @SuppressWarnings("unchecked")
+    /** Litematica files have "Regions"; Sponge {@code .schem} files (WorldEdit, FAWE) have a block palette instead. */
     static Result convert(Map<String, Object> root, String id) {
+        if (root.containsKey("Regions")) return convertLitematic(root, id);
+        return convertSponge(root, id);
+    }
+
+    /**
+     * Sponge schematic v2 (fields at the root) and v3 (under "Schematic" / "Blocks"). Blocks are indexed
+     * {@code x + z * width + y * width * length}; entries are varints into the palette. Block entities and
+     * entities are ignored, so chests arrive empty.
+     */
+    @SuppressWarnings("unchecked")
+    static Result convertSponge(Map<String, Object> root, String id) {
+        Map<String, Object> schematic = root.get("Schematic") instanceof Map<?, ?> s ? (Map<String, Object>) s : root;
+        Map<String, Object> blocks = schematic.get("Blocks") instanceof Map<?, ?> b ? (Map<String, Object>) b : schematic;
+        int version = schematic.get("Version") instanceof Number n ? n.intValue() : 0;
+        if (version != 2 && version != 3) throw new IllegalArgumentException("Unsupported schematic format (Sponge version " + version + "); only .litematic and Sponge .schem v2/v3 are supported");
+        long w = Nbt.size(schematic, "Width"), h = Nbt.size(schematic, "Height"), l = Nbt.size(schematic, "Length");
+        if (w == 0 || h == 0 || l == 0) throw new IllegalArgumentException("Schematic is empty");
+        if (w * h * l > MAX_REGION_CELLS) throw new IllegalArgumentException("Schematic is too large");
+        Map<String, Object> paletteTag = Nbt.compound(blocks, "Palette");
+        String dataKey = version == 3 ? "Data" : "BlockData";
+        if (!(blocks.get(dataKey) instanceof byte[] data)) throw new IllegalArgumentException("Schematic is missing block data");
+        int paletteSize = 0;
+        for (Object v : paletteTag.values()) {
+            if (!(v instanceof Number n) || n.intValue() < 0 || n.intValue() > 1 << 20) throw new IllegalArgumentException("Malformed palette");
+            paletteSize = Math.max(paletteSize, n.intValue() + 1);
+        }
+        if (paletteSize == 0) throw new IllegalArgumentException("Schematic has an empty palette");
+        Resolved[] resolved = new Resolved[paletteSize];
+        for (Map.Entry<String, Object> e : paletteTag.entrySet()) {
+            String text = e.getKey();
+            int bracket = text.indexOf('[');
+            resolved[((Number) e.getValue()).intValue()] = resolveState(bracket < 0 ? text : text.substring(0, bracket), text);
+        }
+
+        Map<String, Integer> skipped = new TreeMap<>();
+        int normalized = 0, cursor = 0;
+        List<int[]> positions = new ArrayList<>();
+        List<String> states = new ArrayList<>();
+        long cells = w * h * l;
+        for (long index = 0; index < cells; index++) {
+            int value = 0, shift = 0;
+            while (true) {
+                if (cursor >= data.length || shift > 28) throw new IllegalArgumentException("Block data is truncated or corrupt");
+                int b = data[cursor++];
+                value |= (b & 0x7F) << shift;
+                if ((b & 0x80) == 0) break;
+                shift += 7;
+            }
+            if (value >= paletteSize || resolved[value] == null) throw new IllegalArgumentException("Palette index out of range");
+            Resolved r = resolved[value];
+            if (r.air()) continue;
+            if (r.data() == null) { skipped.merge(r.id(), 1, Integer::sum); continue; }
+            if (r.normalized()) normalized++;
+            if (states.size() > ConstructionPlan.maxBlocks()) continue;
+            positions.add(new int[]{(int) (index % w), (int) (index / (w * l)), (int) ((index / w) % l)});
+            states.add(r.data());
+        }
+        String name = schematic.get("Metadata") instanceof Map<?, ?> m && m.get("Name") instanceof String s && !s.isBlank() ? s : id;
+        return build(id, name, positions, states, skipped, normalized);
+    }
+
+    @SuppressWarnings("unchecked")
+    static Result convertLitematic(Map<String, Object> root, String id) {
         Map<String, Object> regions = Nbt.compound(root, "Regions");
         Object metadata = root.get("Metadata");
         // Litematica writes "Unnamed" when the player never named the schematic; the file-based id reads better.
@@ -94,6 +157,10 @@ public final class LitematicImport {
                 states.add(r.data());
             }
         }
+        return build(id, name, positions, states, skipped, normalized);
+    }
+
+    private static Result build(String id, String name, List<int[]> positions, List<String> states, Map<String, Integer> skipped, int normalized) {
         if (states.isEmpty()) throw new IllegalArgumentException("No supported blocks found" + (skipped.isEmpty() ? "" : " (skipped " + skipped.keySet() + ")"));
         if (states.size() > ConstructionPlan.maxBlocks())
             throw new IllegalArgumentException("Schematic has more than " + ConstructionPlan.maxBlocks() + " supported blocks; the current limit is " + ConstructionPlan.maxBlocks());
@@ -129,8 +196,14 @@ public final class LitematicImport {
             properties.forEach((k, v) -> joined.add(k + "=" + v));
             text.append(joined);
         }
+        return resolveState(id, text.toString());
+    }
+
+    /** Resolves a full block state string such as {@code minecraft:oak_stairs[facing=north]}. */
+    private static Resolved resolveState(String id, String stateText) {
+        if (AIR.contains(id)) return new Resolved(id, null, true, false);
         BlockData original;
-        try { original = Bukkit.createBlockData(text.toString()); }
+        try { original = Bukkit.createBlockData(stateText); }
         catch (IllegalArgumentException e) { return new Resolved(id, null, false, false); }
         BlockData data = MaterialCost.normalize(original);
         if (MaterialCost.unsupportedReason(data) != null) return new Resolved(id, null, false, false);
@@ -155,7 +228,7 @@ public final class LitematicImport {
         static Map<String, Object> readRoot(InputStream raw) throws IOException {
             Limited limited = new Limited(raw, MAX_NBT_BYTES);
             DataInputStream in = new DataInputStream(limited);
-            if (in.readUnsignedByte() != 10) throw new IllegalArgumentException("Not a .litematic file (root is not an NBT compound)");
+            if (in.readUnsignedByte() != 10) throw new IllegalArgumentException("Not a .litematic or .schem file (root is not an NBT compound)");
             in.readUTF();
             return (Map<String, Object>) payload(in, limited, 10, 0);
         }
@@ -203,6 +276,11 @@ public final class LitematicImport {
         }
         static int integer(Map<String, Object> parent, String key) {
             if (parent.get(key) instanceof Number n) return n.intValue();
+            throw new IllegalArgumentException("Missing " + key);
+        }
+        /** Schematic dimensions are unsigned shorts, so a signed short may arrive negative. */
+        static long size(Map<String, Object> parent, String key) {
+            if (parent.get(key) instanceof Number n) return n instanceof Short s ? s & 0xFFFF : n.longValue();
             throw new IllegalArgumentException("Missing " + key);
         }
     }

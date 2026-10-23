@@ -244,7 +244,7 @@ public final class ClientBridge implements PluginMessageListener {
             result(player, true, "Uploaded " + imported.plan().id() + " (" + imported.plan().blockCount() + " blocks)." + (notes.isEmpty() ? "" : " " + notes));
             catalog(player);
         } catch (java.io.IOException e) {
-            result(player, false, "That file isn't a readable .litematic or blueprint .yml (" + e.getMessage() + ").");
+            result(player, false, "That file isn't a readable .litematic, .schem or blueprint .yml (" + e.getMessage() + ").");
         } catch (IllegalArgumentException | IllegalStateException | ArithmeticException e) {
             result(player, false, "Upload failed: " + e.getMessage());
         }
