@@ -179,7 +179,13 @@ public final class BuildManager {
                 throw new IllegalStateException("Placement did not retain the expected state; audit job " + job.id());
         }
         job.advance();
-        if (job.state() == BuildJob.State.COMPLETE) owner.sendMessage("§aBlueprint complete: " + job.plan().name());
+        if (job.state() == BuildJob.State.COMPLETE) {
+            owner.sendMessage("§aBlueprint complete: " + job.plan().name());
+            if (plugin.getConfig().getBoolean("builders-chest.single-use", true)) {
+                if (chestBlock.getState() instanceof Chest fresh) BuildersChest.release(fresh);
+                owner.sendMessage("§7Your Builder's Chest is now a normal chest; any leftover materials are still inside.");
+            }
+        }
     }
     public void save() {
         try { repository.save(jobs.values(), false); }

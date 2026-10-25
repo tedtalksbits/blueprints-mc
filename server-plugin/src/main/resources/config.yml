@@ -11,6 +11,8 @@ construction:
 builders-chest:
   # How far /blueprint start searches for your own Builder's Chest, in blocks from you (1-64).
   search-radius: 16
+  # When a build completes, the chest turns back into a normal chest (contents stay). Cancelled or paused builds keep it.
+  single-use: true
   # Shaped crafting recipe. 1-3 rows of equal length (up to 3 characters); a space is an empty slot.
   # Each letter maps to an item id. Each active build needs its own chest, so this sets the cost of parallel builds.
   recipe:

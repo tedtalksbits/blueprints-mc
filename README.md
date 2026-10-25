@@ -16,7 +16,7 @@ Install **JDK 25**, set `JAVA_HOME`, then run the checked-in Gradle 9.1.0 wrappe
 ./gradlew build
 ```
 
-The first build downloads Gradle and Maven dependencies. Gradle's distribution is SHA-256 pinned, and the Paper API is pinned to `26.3.build.211-stable`. The plugin JAR is `server-plugin/build/libs/server-plugin-0.4.0.jar`. Test reports are in `server-plugin/build/reports/tests/test/index.html`.
+The first build downloads Gradle and Maven dependencies. Gradle's distribution is SHA-256 pinned, and the Paper API is pinned to `26.3.build.211-stable`. The plugin JAR is `server-plugin/build/libs/server-plugin-0.5.0.jar`. Test reports are in `server-plugin/build/reports/tests/test/index.html`.
 
 ## Try the vertical slice
 
@@ -116,6 +116,7 @@ Only block states are imported; entities and container contents are ignored. Ref
 | `construction.max-active-jobs` / `max-active-jobs-per-player` | 16 / 2 | Concurrent unfinished builds |
 | `construction.ticks-between-cycles` / `steps-per-cycle` | 10 / 1 | Build speed |
 | `builders-chest.search-radius` | 16 | How far `/blueprint start` looks for your Builder's Chest |
+| `builders-chest.single-use` | true | Turn the chest into a normal chest when a build completes |
 | `builders-chest.recipe` | chest + 4 iron + 4 paper | Shaped recipe |
 
 Larger limits make `jobs.yml` larger and Creative capture scans more cells, so raise them gradually. Lowering them leaves larger existing blueprints and jobs on disk but unloaded (the log names them).
@@ -126,6 +127,7 @@ Builds draw only from the starter's own **Builder's Chest**, a crafted chest bou
 
 - `/blueprint start` uses your nearest Builder's Chest within `builders-chest.search-radius` (default 16) that isn't already funding an active job. One chest funds one job; each player can run up to 2 jobs at once and the server 16 (`construction.max-active-jobs-per-player`, `construction.max-active-jobs`).
 - Plain chests and other players' Builder's Chests are never used.
+- Builder's Chests are single-use: when a build completes, the chest becomes a normal chest in place and keeps its contents (leftover materials). Cancelled or paused builds keep the Builder's Chest. Set `builders-chest.single-use: false` to restore reusable chests.
 - Breaking it returns the Builder's Chest item; contents drop as normal. Explosions don't destroy it.
 - It can't merge into a double chest. Leave a gap or sneak while placing.
 - Operators can get one with `/blueprint givechest [player]`.
