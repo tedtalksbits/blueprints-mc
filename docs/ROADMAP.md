@@ -12,7 +12,7 @@ Deferred idea: a floating text display above each Builder's Chest showing job pr
 
 ## M1 — Capture, positioning, and client preview (implemented)
 
-Creative capture (up to 65 blocks per side), `.litematic` import, ~785 supported block types, and tested rotation/mirroring. The Fabric 26.2 client previews, moves, rotates, and mirrors a blueprint, shows needed vs. in-chest materials, starts and cancels builds, and shows progress and pause reasons. Verified in a real 26.2 client against a real Paper server.
+Creative capture (up to 65 blocks per side), `.litematic` and `.schem` import, ~785 supported block types, and tested rotation/mirroring. The Fabric 26.2 client previews, moves, rotates, and mirrors a blueprint, shows needed vs. in-chest materials, starts and cancels builds, and shows progress and pause reasons. Verified in a real 26.2 client against a real Paper server.
 
 Next: true block-model rendering for the preview (currently outline shapes in map colors), a blueprint browser with thumbnails, and a server-side blueprint browser for players without the mod. `.litematic` upload from the client is done.
 

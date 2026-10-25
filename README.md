@@ -2,7 +2,7 @@
 
 **Design in Creative. Earn it in Survival.**
 
-A Paper 26.3 plugin that builds a small, server-installed blueprint gradually from real materials in a Builder's Chest. This first slice focuses on exact block states and survival accounting; `.litematic` import and a Fabric client preview are supported.
+A Paper 26.3 plugin that builds a small, server-installed blueprint gradually from real materials in a Builder's Chest. This first slice focuses on exact block states and survival accounting; `.litematic` and Sponge `.schem` (WorldEdit/FAWE) import and a Fabric client preview are supported.
 
 ## Build
 
@@ -16,7 +16,7 @@ Install **JDK 25**, set `JAVA_HOME`, then run the checked-in Gradle 9.1.0 wrappe
 ./gradlew build
 ```
 
-The first build downloads Gradle and Maven dependencies. Gradle's distribution is SHA-256 pinned, and the Paper API is pinned to `26.3.build.211-stable`. The plugin JAR is `server-plugin/build/libs/server-plugin-0.3.1.jar`. Test reports are in `server-plugin/build/reports/tests/test/index.html`.
+The first build downloads Gradle and Maven dependencies. Gradle's distribution is SHA-256 pinned, and the Paper API is pinned to `26.3.build.211-stable`. The plugin JAR is `server-plugin/build/libs/server-plugin-0.4.0.jar`. Test reports are in `server-plugin/build/reports/tests/test/index.html`.
 
 ## Try the vertical slice
 
@@ -84,7 +84,7 @@ Install: Fabric Loader for 26.3, plus `fabric-api-0.164.0+26.3.jar` and `bluepri
 | `Enter` | Start the build here (uses your nearest free Builder's Chest) |
 | `Backspace` | Close the preview |
 
-**Upload file...** lists `.litematic` files and blueprint `.yml`/`.yaml` files (the format Creative capture writes) in your `.minecraft/schematics` folder (where Litematica saves; subfolders included). Pick one, name it, upload; the server imports it with the same rules as `/blueprint import` (needs `blueprints.upload`, op by default, or `uploads.allow-everyone: true`; size limit `uploads.max-kilobytes`). A YAML upload is validated like any blueprint (supported blocks only, `limits.*`); the `id` and `owner` inside the file are ignored in favor of the name you pick and your account.
+**Upload file...** lists `.litematic` and `.schem` files and blueprint `.yml`/`.yaml` files (the format Creative capture writes) in your `.minecraft/schematics` folder (where Litematica saves; subfolders included). Pick one, name it, upload; the server imports it with the same rules as `/blueprint import` (needs `blueprints.upload`, op by default, or `uploads.allow-everyone: true`; size limit `uploads.max-kilobytes`). A YAML upload is validated like any blueprint (supported blocks only, `limits.*`); the `id` and `owner` inside the file are ignored in favor of the name you pick and your account.
 
 **Ownership.** Whoever captures or uploads a blueprint owns it; the menu shows "by <name>". Owners see a **Delete** button on their own blueprints (operators on all of them). Deleted files move to `plugins/Blueprints/blueprints/trash/`; move one back and restart to restore it. Builds already running from a deleted blueprint finish normally. Each player may own up to `uploads.max-per-player` blueprints (default 10; operators have no cap); the menu shows "Yours: 3 / 10" and disables Upload/Capture when full. Blueprints from before this feature, and ones placed by hand in the folder, have no owner, so only operators can delete them. Command: `/blueprint delete <id>`.
 
@@ -94,10 +94,10 @@ Build the client separately (it needs a newer Gradle than the plugin): `cd fabri
 
 ## Import a Litematica schematic
 
-Operators (`blueprints.import`) can turn a `.litematic` file into a blueprint:
+Operators (`blueprints.import`) can turn a `.litematic` or `.schem` file into a blueprint:
 
 1. Copy the file into `plugins/Blueprints/import/` (the server can stay running).
-2. Run `/blueprint import <file> [id]`. The `.litematic` extension is optional, and tab completion lists the folder. Without an id, one is made from the file name.
+2. Run `/blueprint import <file> [id]`. The extension is optional, and tab completion lists the folder. Without an id, one is made from the file name.
 3. Check `/blueprint materials <id>`, then build it like any other blueprint.
 
 Only block states are imported; entities and container contents are ignored. Refused block types (see Supported blocks below) are **skipped and listed** in the import message so you can place them by hand. States are adjusted the same way as Creative capture. All regions of a multi-region schematic are combined, and the origin is the combined minimum corner. Size limits come from `limits.*` in `config.yml` (default 4,096 blocks, 65 per side); larger schematics are rejected with their size. With the client mod you can also upload from your `.minecraft/schematics` folder (see below).
@@ -110,7 +110,7 @@ Only block states are imported; entities and container contents are ignored. Ref
 |---|---|---|
 | `limits.max-blocks` | 4096 | Largest blueprint in blocks (1-32768) for capture, import, upload, and builds |
 | `limits.max-span` | 65 | Longest side in blocks (1-128) |
-| `uploads.max-kilobytes` | 2048 | Largest `.litematic` the client mod may upload (64-8192) |
+| `uploads.max-kilobytes` | 2048 | Largest schematic the client mod may upload (64-8192) |
 | `uploads.allow-everyone` | false | `true` lets every player upload from the client mod, not just `blueprints.upload` |
 | `uploads.max-per-player` | 10 | Most blueprints one player may own (captures + uploads); 0 = no cap; operators exempt |
 | `construction.max-active-jobs` / `max-active-jobs-per-player` | 16 / 2 | Concurrent unfinished builds |

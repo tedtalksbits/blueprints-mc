@@ -19,10 +19,10 @@ permissions:
     description: Inspect/cancel any job and use /blueprint givechest.
     default: op
   blueprints.upload:
-    description: Upload .litematic files from the Blueprints client mod.
+    description: Upload .litematic, .schem and blueprint files from the Blueprints client mod.
     default: op
   blueprints.import:
-    description: Import .litematic files from plugins/Blueprints/import.
+    description: Import .litematic and .schem files from plugins/Blueprints/import.
     default: op
   blueprints.capture:
     description: Capture small Creative selections as validated blueprints.

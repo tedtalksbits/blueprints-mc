@@ -31,14 +31,14 @@ public final class UploadScreen extends Screen {
 	private Button upload;
 
 	public UploadScreen(Screen parent) {
-		super(Component.literal("Upload a .litematic or blueprint .yml"));
+		super(Component.literal("Upload a .litematic, .schem or blueprint .yml"));
 		this.parent = parent;
 		this.folder = Minecraft.getInstance().gameDirectory.toPath().resolve("schematics");
 	}
 
 	private static boolean supported(Path p) {
 		String n = p.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
-		return (n.endsWith(".litematic") || n.endsWith(".yml") || n.endsWith(".yaml")) && Files.isRegularFile(p);
+		return (n.endsWith(".litematic") || n.endsWith(".schem") || n.endsWith(".yml") || n.endsWith(".yaml")) && Files.isRegularFile(p);
 	}
 
 	static String suggestedName(String fileName) {
@@ -118,7 +118,7 @@ public final class UploadScreen extends Screen {
 		g.centeredText(font, title.getString(), width / 2, 10, Hud.WHITE);
 		int x = LIST_WIDTH + 30;
 		if (files.isEmpty()) {
-			g.text(font, "No .litematic or .yml files found in:", 10, 30, Hud.GRAY);
+			g.text(font, "No .litematic, .schem or .yml files found in:", 10, 30, Hud.GRAY);
 			g.text(font, font.plainSubstrByWidth(folder.toString(), LIST_WIDTH + 10), 10, 42, Hud.GRAY);
 			g.text(font, "Save with Litematica or copy files there, then Refresh.", 10, 58, Hud.GRAY);
 		}
