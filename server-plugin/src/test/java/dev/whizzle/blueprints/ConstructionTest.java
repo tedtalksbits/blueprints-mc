@@ -53,6 +53,19 @@ class ConstructionTest {
         put(Material.STONE, 1); manager.tick(); assertEquals(BuildJob.State.COMPLETE, restored.state());
         assertTrue(chest.getBlockInventory().isEmpty()); assertEquals(Material.STONE, world.getBlockAt(3, 65, 2).getType());
     }
+    @Test void completedBuildTurnsTheChestIntoANormalChest() {
+        BuildJob job = start(plan(stone(0), stone(1))); put(Material.STONE, 5);
+        manager.tick(); assertEquals(BuildJob.State.BUILDING, job.state()); assertEquals(4, chest.getBlockInventory().getItem(0).getAmount());
+        assertTrue(BuildersChest.isBuildersChest(world.getBlockAt(0, 65, 0)));
+        manager.tick(); assertEquals(BuildJob.State.COMPLETE, job.state());
+        assertFalse(BuildersChest.isBuildersChest(world.getBlockAt(0, 65, 0)));
+        assertEquals(Material.CHEST, world.getBlockAt(0, 65, 0).getType());
+    }
+    @Test void pausedBuildKeepsTheBuildersChest() {
+        BuildJob job = start(plan(stone(0), stone(1)));
+        manager.tick(); // paused for materials
+        assertTrue(BuildersChest.isBuildersChest(world.getBlockAt(0, 65, 0)));
+    }
     @Test void stateTransitionsAreCheckpointedImmediately() {
         BuildJob job = start(plan(stone(0), stone(1)));
         manager.tick();
@@ -96,6 +109,7 @@ class ConstructionTest {
         assertEquals(BuildJob.State.COMPLETE, job.state());
         assertEquals(Material.STONE, world.getBlockAt(2, 65, 2).getType());
         world.getBlockAt(2, 65, 2).setType(Material.DIRT);
+        BuildersChest.claim(chest, owner);
         BuildJob blocked = start(plan(stone(0))); put(Material.STONE, 1);
         manager.tick();
         assertEquals(BuildJob.State.PAUSED_OBSTRUCTION, blocked.state());

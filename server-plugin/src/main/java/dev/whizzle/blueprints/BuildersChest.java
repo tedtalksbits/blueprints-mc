@@ -70,6 +70,12 @@ public final class BuildersChest implements Listener {
         chest.update();
     }
 
+    /** Turns a Builder's Chest back into a normal chest; its contents are untouched. */
+    public static void release(Chest chest) {
+        chest.getPersistentDataContainer().remove(OWNER_KEY);
+        chest.update();
+    }
+
     /** The player's closest Builder's Chest within radius that passes {@code available}; only loaded chunks are inspected. */
     public static Optional<Chest> nearestOwned(Player player, int radius, Predicate<Chest> available) {
         World world = player.getWorld();
