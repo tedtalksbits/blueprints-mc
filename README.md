@@ -16,7 +16,7 @@ Install **JDK 25**, set `JAVA_HOME`, then run the checked-in Gradle 9.1.0 wrappe
 ./gradlew build
 ```
 
-The first build downloads Gradle and Maven dependencies. Gradle's distribution is SHA-256 pinned, and the Paper API is pinned to `26.3.build.211-stable`. The plugin JAR is `server-plugin/build/libs/server-plugin-0.5.0.jar`. Test reports are in `server-plugin/build/reports/tests/test/index.html`.
+The first build downloads Gradle and Maven dependencies. Gradle's distribution is SHA-256 pinned, and the Paper API is pinned to `26.3.build.211-stable`. The plugin JAR is `server-plugin/build/libs/server-plugin-0.6.0.jar`. Test reports are in `server-plugin/build/reports/tests/test/index.html`.
 
 ## Try the vertical slice
 
@@ -28,6 +28,8 @@ Use a separate Paper 26.3 test server running Java 25. Stop it, copy the JAR int
 4. Within 16 blocks of the chest, run `/blueprint start orientation-demo <x> <y> <z>`. Your nearest free Builder's Chest funds the build. The origin is the bottom corner of the new platform, so choose a Y level whose destination cells are air.
 5. Stay nearby in Survival. A construction step runs every half-second by default. Both door halves appear together for one door item; the double slab consumes two slab items.
 6. Run `/blueprint status` to inspect progress and pause reasons. Missing materials, unloaded chunks, obstruction, a missing/double chest, and an unavailable owner pause work. These conditions resume automatically when resolved.
+
+**What's in the way.** Air is free. Grass, flowers and snow layers are replaced without drops. **Water** (still or flowing), seagrass and bubble columns are built into, so you can build a boat or a pier in the sea: solid blocks push the water out, and blocks that can hold water (slabs, stairs, fences, panes, trapdoors, signs) go in waterlogged, exactly as when you place them by hand. Builds never remove water, so the inside of a hull stays flooded until you empty it. Blocks water would wash away or change (torches, flowers, redstone dust, concrete powder, sponges) can't be built into water, and lava, kelp, sea pickles and every other block pause the build until you remove them. Captures and imports skip water, seagrass and bubble columns like air.
 7. `/blueprint cancel <job-id-prefix>` stops a job. Placed blocks remain and spent items are not refunded.
 
 The demo has **38 blocks in 37 paid steps**. It exercises four stair directions (including upside-down), X/Y/Z logs, bottom/top/double slabs, a top/open trapdoor, and a right-hinged door.
@@ -72,7 +74,7 @@ This mirrors the design's local X axis, then rotates it 90 degrees clockwise whe
 
 The optional client mod for **Minecraft Java 26.3 + Fabric** adds a see-through preview you can move, rotate, and mirror before starting a build. The server stays in charge: the mod only proposes a blueprint, a spot, and an orientation, and the plugin runs the same checks as `/blueprint start`. Players without the mod keep using commands.
 
-Install: Fabric Loader for 26.3, plus `fabric-api-0.164.0+26.3.jar` and `blueprints-client-0.3.0.jar` in the instance's `mods` folder. `run/local-paper/build-and-install.cmd` builds the client too and copies both jars to `run/client-mods/`.
+Install: Fabric Loader for 26.3, plus `fabric-api-0.164.0+26.3.jar` and `blueprints-client-0.4.0.jar` in the instance's `mods` folder. `run/local-paper/build-and-install.cmd` builds the client too and copies both jars to `run/client-mods/`.
 
 | Key (rebindable) | Action |
 |---|---|
@@ -88,7 +90,7 @@ Install: Fabric Loader for 26.3, plus `fabric-api-0.164.0+26.3.jar` and `bluepri
 
 **Ownership.** Whoever captures or uploads a blueprint owns it; the menu shows "by <name>". Owners see a **Delete** button on their own blueprints (operators on all of them). Deleted files move to `plugins/Blueprints/blueprints/trash/`; move one back and restart to restore it. Builds already running from a deleted blueprint finish normally. Each player may own up to `uploads.max-per-player` blueprints (default 10; operators have no cap); the menu shows "Yours: 3 / 10" and disables Upload/Capture when full. Blueprints from before this feature, and ones placed by hand in the folder, have no owner, so only operators can delete them. Command: `/blueprint delete <id>`.
 
-Preview keys only act while a preview is shown, and the on-screen panel always lists the current bindings. The preview draws each block's real shape (stairs, slabs, doors, walls, fences show their orientation) in its map color; blocks already built correctly disappear, and anything in the way is drawn red. While builds run, the panel shows progress and why a build is paused; selecting a blueprint you are building shows what's left against that build's own chest. Stopping a build asks for confirmation. Shader packs (Iris) can hide the preview; the panel says so, and toggling shaders while placing works around it.
+Preview keys only act while a preview is shown, and the on-screen panel always lists the current bindings. The preview draws each block's real shape (stairs, slabs, doors, walls, fences show their orientation) in its map color; blocks already built correctly disappear, and anything in the way is drawn red (water isn't, unless that block can't go in water). While builds run, the panel shows progress and why a build is paused; selecting a blueprint you are building shows what's left against that build's own chest. Stopping a build asks for confirmation. Shader packs (Iris) can hide the preview; the panel says so, and toggling shaders while placing works around it.
 
 Build the client separately (it needs a newer Gradle than the plugin): `cd fabric-client` then `gradlew build`. The wire protocol is in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 

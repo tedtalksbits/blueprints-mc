@@ -189,7 +189,7 @@ public final class LitematicImport {
         if (!(entry instanceof Map<?, ?>)) throw new IllegalArgumentException("Malformed palette entry");
         Map<String, Object> map = (Map<String, Object>) entry;
         if (!(map.get("Name") instanceof String id)) throw new IllegalArgumentException("Palette entry has no Name");
-        if (AIR.contains(id)) return new Resolved(id, null, true, false);
+        if (AIR.contains(id) || MaterialCost.isWater(id)) return new Resolved(id, null, true, false);
         StringBuilder text = new StringBuilder(id);
         if (map.get("Properties") instanceof Map<?, ?> properties && !properties.isEmpty()) {
             StringJoiner joined = new StringJoiner(",", "[", "]");
@@ -201,7 +201,7 @@ public final class LitematicImport {
 
     /** Resolves a full block state string such as {@code minecraft:oak_stairs[facing=north]}. */
     private static Resolved resolveState(String id, String stateText) {
-        if (AIR.contains(id)) return new Resolved(id, null, true, false);
+        if (AIR.contains(id) || MaterialCost.isWater(id)) return new Resolved(id, null, true, false);
         BlockData original;
         try { original = Bukkit.createBlockData(stateText); }
         catch (IllegalArgumentException e) { return new Resolved(id, null, false, false); }

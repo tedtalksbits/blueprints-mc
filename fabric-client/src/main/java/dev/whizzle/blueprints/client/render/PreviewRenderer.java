@@ -12,11 +12,15 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.ARGB;
 import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ConcretePowderBlock;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -58,8 +62,8 @@ public final class PreviewRenderer {
 				Look look = current.get(b.state());
 				cursor.set(b.x(), b.y(), b.z());
 				BlockState there = mc.level.getBlockState(cursor);
-				if (there.equals(look.state())) return;                       // already built
-				boolean obstructed = !there.isAir() && !there.canBeReplaced();
+				if (sameIgnoringWater(there, look.state())) return;            // already built (a slab built in water is waterlogged)
+				boolean obstructed = obstructed(there, look.state());
 				int color = ARGB.color(obstructed ? Math.max(alpha, 200) : alpha, obstructed ? OBSTRUCTED_RGB : look.rgb());
 				// Obstructions are drawn slightly larger so they sit on top of the real block's faces instead of flickering.
 				for (AABB box : look.boxes()) drawBox(p, buffer, (obstructed ? box.inflate(0.01) : box).move(b.x(), b.y(), b.z()), color);
@@ -67,6 +71,31 @@ public final class PreviewRenderer {
 			drawFrame(p, buffer, placement, ARGB.color(Math.min(255, alpha + 60), 0xFFFFFF));
 		});
 		pose.popPose();
+	}
+
+	/**
+	 * Mirrors the plugin's BuildManager.obstruction: air is free; water, seagrass and bubble columns are built into
+	 * unless the block would wash away or change there (torches, flowers, sponge, concrete powder); grass, flowers and
+	 * other replaceable blocks are cleared; lava and everything else block the build.
+	 */
+	static boolean obstructed(BlockState there, BlockState planned) {
+		if (there.isAir()) return false;
+		if (there.is(Blocks.WATER) || there.is(Blocks.BUBBLE_COLUMN) || there.is(Blocks.SEAGRASS) || there.is(Blocks.TALL_SEAGRASS))
+			return !canPlaceInWater(planned);
+		if (!there.getFluidState().isEmpty()) return true;
+		return !there.canBeReplaced();
+	}
+
+	static boolean canPlaceInWater(BlockState planned) {
+		if (planned.is(Blocks.SPONGE) || planned.getBlock() instanceof ConcretePowderBlock) return false;
+		// Same test as Paper's Material.isSolid(), which the plugin uses.
+		return planned.hasProperty(BlockStateProperties.WATERLOGGED) || planned.getBlock().defaultBlockState().is(BlockTags.BLOCKS_MOTION);
+	}
+
+	static boolean sameIgnoringWater(BlockState a, BlockState b) {
+		if (a.equals(b)) return true;
+		if (!a.hasProperty(BlockStateProperties.WATERLOGGED) || !b.hasProperty(BlockStateProperties.WATERLOGGED)) return false;
+		return a.setValue(BlockStateProperties.WATERLOGGED, false).equals(b.setValue(BlockStateProperties.WATERLOGGED, false));
 	}
 
 	/** Capture selection: a yellow box from the first corner to the second (or to the block under the crosshair). */

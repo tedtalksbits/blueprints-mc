@@ -14,8 +14,8 @@ Sponge `.schem` import, and an optional Fabric client mod that previews, moves, 
 Standalone: its own repo and versions; Logic Blocks, Shulker Styles and Glow-Fed Frogs copied its patterns, not the
 other way round.
 
-- `server-plugin/`: the Paper plugin (Java 25). Plugin 0.4.0 (`build.gradle.kts`).
-- `fabric-client/`: the Fabric client mod, its own Gradle build. Client 0.3.1, Minecraft 26.3 only.
+- `server-plugin/`: the Paper plugin (Java 25). Plugin 0.6.0 (`build.gradle.kts`).
+- `fabric-client/`: the Fabric client mod, its own Gradle build. Client 0.4.0, Minecraft 26.3 only.
 - `paper-selftest/`: development-only plugin that checks the plugin on a real Paper server (`docs/UPGRADING.md`).
 - `run/local-paper/`: the owner's local Paper 26.3 test server (`build-and-install.cmd`, `start.cmd`). Other projects'
   dev loops install into it too.

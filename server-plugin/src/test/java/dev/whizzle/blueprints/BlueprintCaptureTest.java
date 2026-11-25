@@ -59,6 +59,17 @@ class BlueprintCaptureTest {
         var plan = capture("wet", 1, 65, 1, 1, 65, 1);
         assertTrue(plan.steps().getFirst().blocks().getFirst().blockData().contains("waterlogged=false"));
     }
+    @Test void waterAroundABoatIsSurroundingsNotPartOfTheCapture() {
+        world.getBlockAt(1, 65, 1).setType(Material.OAK_PLANKS);
+        world.getBlockAt(2, 65, 1).setType(Material.WATER);
+        world.getBlockAt(3, 65, 1).setType(Material.SEAGRASS);
+        world.getBlockAt(1, 66, 1).setType(Material.BUBBLE_COLUMN);
+        var plan = capture("boat", 1, 65, 1, 3, 66, 1);
+        assertEquals(1, plan.blockCount(), "only the planks; water, seagrass and bubble columns are skipped like air");
+        world.getBlockAt(2, 65, 1).setType(Material.KELP_PLANT);
+        var e = assertThrows(IllegalArgumentException.class, () -> capture("kelp", 1, 65, 1, 3, 66, 1));
+        assertTrue(e.getMessage().contains("kelp"), e.getMessage());
+    }
     @Test void largeSparseSelectionsAreAllowed() {
         world.getBlockAt(0, 65, 0).setType(Material.STONE);
         world.getBlockAt(40, 70, 40).setType(Material.STONE);

@@ -25,8 +25,16 @@ public final class SelfTestPlugin extends JavaPlugin {
     private void check(boolean ok, String what) { if (!ok) failures++; report.add((ok ? "PASS " : "FAIL ") + what); }
 
     private void run() {
-        try { channels(); palette(); transforms(); placement(); importFiles(); census(); }
-        catch (Throwable t) { failures++; report.add("FAIL crashed: " + t); getLogger().log(java.util.logging.Level.SEVERE, "self-test crashed", t); }
+        try { channels(); palette(); transforms(); placement(); importFiles(); census(); waterSetup(); }
+        catch (Throwable t) { failures++; report.add("FAIL crashed: " + t); getLogger().log(java.util.logging.Level.SEVERE, "self-test crashed", t); finish(); return; }
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            try { waterCheck(); }
+            catch (Throwable t) { failures++; report.add("FAIL crashed: " + t); getLogger().log(java.util.logging.Level.SEVERE, "self-test crashed", t); }
+            finish();
+        }, 60L);
+    }
+
+    private void finish() {
         report.add(0, "SELFTEST " + (failures == 0 ? "PASSED" : "FAILED (" + failures + ")") + " on " + Bukkit.getVersion());
         try {
             Files.createDirectories(getDataFolder().toPath());
@@ -156,6 +164,101 @@ public final class SelfTestPlugin extends JavaPlugin {
                 }
             }
         }
+    }
+
+    // ---- Building in water ----
+
+    private record WaterCase(BlockData data, Block wet, Block dry) {}
+    private final List<WaterCase> waterCases = new ArrayList<>();
+
+    /**
+     * Every supported block (default state, as a build places it) goes into a cell surrounded by water and, as a
+     * control, into the same spot in air, each on a stone floor. Then each is updated with physics so the water
+     * flows. waterCheck() compares what survived with MaterialCost.canPlaceInWater, the rule builds use.
+     */
+    private void waterSetup() {
+        World world = Bukkit.getWorlds().getFirst();
+        int y0 = world.getMaxHeight() - 40, wetX = 2000, dryX = 2200, columns = 32;
+        List<BlockData> datas = new ArrayList<>();
+        for (Material m : Material.values()) {
+            if (m.isLegacy() || !m.isBlock() || m.isAir()) continue;
+            BlockData d;
+            try { d = MaterialCost.normalize(m.createBlockData()); } catch (RuntimeException e) { continue; }
+            if (MaterialCost.unsupportedReason(d) != null || d instanceof org.bukkit.block.data.Bisected) continue;
+            datas.add(d);
+        }
+        int rows = (datas.size() + columns - 1) / columns, w = columns * 2 + 1, h = rows * 2 + 1;
+        for (int cx = wetX >> 4; cx <= (dryX + w) >> 4; cx++) for (int cz = 0; cz <= h >> 4; cz++) world.setChunkForceLoaded(cx, cz, true);
+        for (int base : new int[]{wetX, dryX}) {
+            boolean wet = base == wetX;
+            for (int x = -1; x <= w; x++) for (int z = -1; z <= h; z++) {
+                boolean wall = x < 0 || z < 0 || x == w || z == h;
+                world.getBlockAt(base + x, y0, z).setType(Material.STONE, false);
+                for (int y = 1; y <= 4; y++)
+                    world.getBlockAt(base + x, y0 + y, z).setType(wall ? (wet ? Material.GLASS : Material.AIR) : (wet && y <= 3 ? Material.WATER : Material.AIR), false);
+            }
+        }
+        for (int i = 0; i < datas.size(); i++) {
+            int x = 1 + (i % columns) * 2, z = 1 + (i / columns) * 2;
+            Block wetCell = world.getBlockAt(wetX + x, y0 + 1, z), dryCell = world.getBlockAt(dryX + x, y0 + 1, z);
+            wetCell.setBlockData(MaterialCost.inWater(datas.get(i)), false);   // what BuildManager places into water
+            dryCell.setBlockData(datas.get(i), false);
+            waterCases.add(new WaterCase(datas.get(i), wetCell, dryCell));
+        }
+        // Wake the neighbours: re-placing the water above with physics makes it flow (and tests survival) like in a real game.
+        for (WaterCase c : waterCases) {
+            Block above = c.wet().getRelative(0, 1, 0);
+            above.setType(Material.AIR, false); above.setType(Material.WATER, true);
+            Block dryAbove = c.dry().getRelative(0, 1, 0);
+            dryAbove.setType(Material.STONE, false); dryAbove.setType(Material.AIR, true);
+        }
+        report.add("INFO water: " + waterCases.size() + " supported block types placed in water and in air (two-block types checked separately)");
+        doorSetup();
+    }
+
+    private void waterCheck() {
+        List<String> lost = new ArrayList<>(), stricter = new ArrayList<>(), support = new ArrayList<>();
+        int dryOk = 0, washedAsExpected = 0;
+        for (WaterCase c : waterCases) {
+            String name = c.data().getMaterial().name().toLowerCase();
+            boolean controlKept = c.dry().getType() == c.data().getMaterial();
+            if (!controlKept) { support.add(name); continue; }
+            boolean kept = c.wet().getType() == c.data().getMaterial();
+            // Compared with the control in air, so neighbour-driven state (a note block's instrument) doesn't count.
+            boolean same = kept && MaterialCost.sameIgnoringWater(c.wet().getBlockData(), c.dry().getBlockData());
+            boolean rule = MaterialCost.canPlaceInWater(c.data());
+            if (rule && same) dryOk++;
+            else if (rule) lost.add(name + (kept ? " (changed to " + c.wet().getBlockData().getAsString() + ")" : " (washed away or turned into " + c.wet().getType().name().toLowerCase() + ")"));
+            else if (!kept) washedAsExpected++;
+            else stricter.add(name);
+        }
+        check(lost.isEmpty(), "every block a build places into water stays put (" + dryOk + " checked)" + (lost.isEmpty() ? "" : ": " + lost));
+        report.add("INFO water: " + washedAsExpected + " block types refused in water really are washed away");
+        if (!stricter.isEmpty()) report.add("INFO water: refused in water but would survive (could be allowed later): " + String.join(" ", stricter));
+        if (!support.isEmpty()) report.add("INFO water: not checked, need other support than stone: " + String.join(" ", support));
+        doorCheck();
+    }
+
+    private Block doorLower;
+
+    private void doorSetup() {
+        World world = Bukkit.getWorlds().getFirst();
+        int y0 = world.getMaxHeight() - 40;
+        Block lower = world.getBlockAt(2400, y0 + 1, 0), upper = lower.getRelative(0, 1, 0);
+        world.getBlockAt(2400, y0, 0).setType(Material.STONE, false);
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) for (int dy = 1; dy <= 3; dy++)
+            world.getBlockAt(2400 + dx, y0 + dy, dz).setType(Material.WATER, false);
+        BlockData lowerData = Bukkit.createBlockData("minecraft:oak_door[half=lower]"), upperData = Bukkit.createBlockData("minecraft:oak_door[half=upper]");
+        check(MaterialCost.canPlaceInWater(lowerData), "doors may be built in water");
+        lower.setBlockData(lowerData, false); upper.setBlockData(upperData, false);
+        Block side = lower.getRelative(1, 0, 0);
+        side.setType(Material.AIR, false); side.setType(Material.WATER, true);
+        doorLower = lower;
+    }
+
+    private void doorCheck() {
+        Block upper = doorLower.getRelative(0, 1, 0);
+        check(doorLower.getType() == Material.OAK_DOOR && upper.getType() == Material.OAK_DOOR, "a door placed in water stays (both halves)");
     }
 
     /** Lists every block id the palette refuses, grouped by reason, for review. */

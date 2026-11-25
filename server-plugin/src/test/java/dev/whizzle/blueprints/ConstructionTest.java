@@ -115,6 +115,65 @@ class ConstructionTest {
         assertEquals(BuildJob.State.PAUSED_OBSTRUCTION, blocked.state());
         assertEquals("Blocked by dirt at 2,65,2 - remove it to resume", blocked.pauseReason());
     }
+    BlueprintBlock at(int x, String state) { return new BlueprintBlock(x, 0, 0, state); }
+
+    @Test void buildsReplaceWaterSoBoatsCanBeBuiltInTheSea() {
+        world.getBlockAt(2, 65, 2).setType(Material.WATER);
+        world.getBlockAt(3, 65, 2).setBlockData(Bukkit.createBlockData("minecraft:water[level=3]"));   // flowing
+        world.getBlockAt(4, 65, 2).setType(Material.SEAGRASS);
+        world.getBlockAt(5, 65, 2).setType(Material.BUBBLE_COLUMN);
+        BuildJob job = start(plan(at(0, "minecraft:oak_planks"), at(1, "minecraft:oak_slab[type=bottom,waterlogged=false]"),
+            at(2, "minecraft:oak_fence[waterlogged=false]"), at(3, "minecraft:oak_stairs[waterlogged=false]")));
+        put(Material.OAK_PLANKS, 1); put(Material.OAK_SLAB, 1); put(Material.OAK_FENCE, 1); put(Material.OAK_STAIRS, 1);
+        for (int i = 0; i < 4; i++) manager.tick();
+        assertEquals(BuildJob.State.COMPLETE, job.state(), job.pauseReason());
+        assertEquals(Material.OAK_PLANKS, world.getBlockAt(2, 65, 2).getType());
+        assertTrue(world.getBlockAt(3, 65, 2).getBlockData().getAsString().contains("waterlogged=true"), "slab goes in waterlogged, like a hand-placed one");
+        assertTrue(world.getBlockAt(4, 65, 2).getBlockData().getAsString().contains("waterlogged=true"), "fence over seagrass too");
+        assertEquals(Material.OAK_STAIRS, world.getBlockAt(5, 65, 2).getType(), "bubble column replaced");
+    }
+    @Test void blocksThatWaterWashesAwayAndLavaStillPause() {
+        world.getBlockAt(2, 65, 2).setType(Material.WATER);
+        BuildJob torch = start(plan(at(0, "minecraft:torch"))); put(Material.TORCH, 1);
+        manager.tick();
+        assertEquals(BuildJob.State.PAUSED_OBSTRUCTION, torch.state());
+        assertEquals("Can't place torch in water at 2,65,2 (the water would wash it away or change it) - clear the water there to resume", torch.pauseReason());
+        assertEquals(1, chest.getBlockInventory().getItem(0).getAmount(), "nothing charged");
+        manager.cancel(torch.id(), owner.getUniqueId(), true);
+        world.getBlockAt(2, 65, 2).setType(Material.LAVA);
+        BuildersChest.claim(chest, owner);
+        BuildJob lava = start(plan(stone(0))); put(Material.STONE, 1);
+        manager.tick();
+        assertEquals("Blocked by lava at 2,65,2 - remove it to resume", lava.pauseReason());
+        world.getBlockAt(2, 65, 2).setType(Material.KELP_PLANT);
+        manager.tick();
+        assertEquals("Blocked by kelp plant at 2,65,2 - remove it to resume", lava.pauseReason());
+    }
+    @Test void tallSeagrassLeavesWaterNotAnAirPocket() {
+        world.getBlockAt(2, 65, 2).setBlockData(Bukkit.createBlockData("minecraft:tall_seagrass[half=lower]"));
+        world.getBlockAt(2, 66, 2).setBlockData(Bukkit.createBlockData("minecraft:tall_seagrass[half=upper]"));
+        BuildJob job = start(plan(stone(0))); put(Material.STONE, 1);
+        manager.tick();
+        assertEquals(BuildJob.State.COMPLETE, job.state(), job.pauseReason());
+        assertEquals(Material.WATER, world.getBlockAt(2, 66, 2).getType());
+    }
+    @Test void aBuildFloodedLaterStillCountsAsBuilt() {
+        BuildJob job = start(plan(at(0, "minecraft:oak_slab[type=bottom,waterlogged=false]"), stone(1)));
+        world.getBlockAt(2, 65, 2).setBlockData(Bukkit.createBlockData("minecraft:oak_slab[type=bottom,waterlogged=true]"));
+        put(Material.STONE, 1);
+        manager.tick(); manager.tick();
+        assertEquals(BuildJob.State.COMPLETE, job.state(), job.pauseReason());
+        assertEquals(0, chest.getBlockInventory().all(Material.OAK_SLAB).size(), "no slab was needed or charged");
+    }
+    @Test void waterRuleMatchesWhatWaterDoes() {
+        for (String s : List.of("minecraft:stone", "minecraft:oak_planks", "minecraft:oak_door[half=lower]", "minecraft:glass",
+                "minecraft:oak_slab", "minecraft:oak_stairs", "minecraft:oak_fence", "minecraft:glass_pane", "minecraft:oak_trapdoor"))
+            assertTrue(MaterialCost.canPlaceInWater(Bukkit.createBlockData(s)), s);
+        for (String s : List.of("minecraft:torch", "minecraft:poppy", "minecraft:redstone_wire", "minecraft:short_grass", "minecraft:sponge", "minecraft:white_concrete_powder"))
+            assertFalse(MaterialCost.canPlaceInWater(Bukkit.createBlockData(s)), s);
+        assertTrue(MaterialCost.sameIgnoringWater(Bukkit.createBlockData("minecraft:oak_slab[waterlogged=true]"), Bukkit.createBlockData("minecraft:oak_slab[waterlogged=false]")));
+        assertFalse(MaterialCost.sameIgnoringWater(Bukkit.createBlockData("minecraft:oak_slab[type=top]"), Bukkit.createBlockData("minecraft:oak_slab[type=bottom]")));
+    }
     @Test void uncleanRestartNeverReplaysEvenWhenCursorIsStale() {
         BuildJob job = start(plan(stone(0), stone(1))); put(Material.STONE, 2); manager.tick();
         // The on-disk dirty snapshot still has cursor zero; a crash cannot make this a free/repeated placement.

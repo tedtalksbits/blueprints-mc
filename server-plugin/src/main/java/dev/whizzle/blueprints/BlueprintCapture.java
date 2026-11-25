@@ -41,7 +41,7 @@ public final class BlueprintCapture {
         for (int dy = 0; dy < height; dy++) for (int dx = 0; dx < width; dx++) for (int dz = 0; dz < depth; dz++) {
             Block block = world.getBlockAt(minX + dx, minY + dy, minZ + dz);
             if (!world.getWorldBorder().isInside(block.getLocation())) throw new IllegalArgumentException("Selection exceeds world border");
-            if (block.getType().isAir()) continue;
+            if (block.getType().isAir() || MaterialCost.isWater(block.getType())) continue;   // surroundings, not the build
             BlockData data = MaterialCost.normalize(block.getBlockData());
             if (MaterialCost.unsupportedReason(data) != null) {
                 unsupported.merge(block.getType().name().toLowerCase(Locale.ROOT), 1, Integer::sum);

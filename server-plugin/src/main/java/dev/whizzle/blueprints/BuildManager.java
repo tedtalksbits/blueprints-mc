@@ -114,13 +114,28 @@ public final class BuildManager {
     }
     private void pause(BuildJob job, BuildJob.State state, String reason) { job.state(state, reason); }
     private static String at(Block b) { return b.getX() + "," + b.getY() + "," + b.getZ(); }
-    // Grass, flowers, snow layers etc. are overwritten without drops; liquids still count as obstructions.
-    private static boolean clearable(Block b) { return b.isReplaceable() && !b.isLiquid(); }
+    /**
+     * Why a block can't be placed into {@code b}, or null if it can. Air is free. Water (and seagrass, bubble
+     * columns) is built into when {@link MaterialCost#canPlaceInWater} allows it. Grass, flowers, snow layers etc. are
+     * overwritten without drops. Lava and everything else count as obstructions.
+     */
+    static String obstruction(Block b, BlockData placing) {
+        Material m = b.getType();
+        if (m.isAir()) return null;
+        if (MaterialCost.isWater(m)) {
+            if (MaterialCost.canPlaceInWater(placing)) return null;
+            return "Can't place " + placing.getMaterial().name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ') + " in water at " + at(b)
+                + " (the water would wash it away or change it) - clear the water there to resume";
+        }
+        if (b.isReplaceable() && !b.isLiquid()) return null;
+        return "Blocked by " + m.name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ') + " at " + at(b) + " - remove it to resume";
+    }
+    /** Removes the other half of a two-block plant being built over; tall seagrass leaves water behind, not air. */
     private static void clearPlant(Block b) {
-        if (b.getType().isAir() || !clearable(b)) return;
+        if (b.getType().isAir() || b.isLiquid() || !b.isReplaceable()) return;
         if (b.getBlockData() instanceof org.bukkit.block.data.Bisected bisected) {
             Block other = b.getRelative(bisected.getHalf() == org.bukkit.block.data.Bisected.Half.BOTTOM ? org.bukkit.block.BlockFace.UP : org.bukkit.block.BlockFace.DOWN);
-            if (other.getType() == b.getType()) other.setType(Material.AIR, false);
+            if (other.getType() == b.getType()) other.setType(b.getType() == Material.TALL_SEAGRASS ? Material.WATER : Material.AIR, false);
         }
     }
     private void placeNext(BuildJob job) {
@@ -151,7 +166,8 @@ public final class BuildManager {
         }
         int matches = 0;
         for (int i = 0; i < targets.size(); i++) {
-            if (targets.get(i).getBlockData().getAsString().equals(expected.get(i).getAsString())) matches++;
+            // A slab or stair that took on water (built in the sea, or flooded later) still counts as built.
+            if (MaterialCost.sameIgnoringWater(targets.get(i).getBlockData(), expected.get(i))) matches++;
         }
         if (matches == targets.size()) { job.advance(); return; }
         if (matches > 0) {
@@ -159,11 +175,8 @@ public final class BuildManager {
             pause(job, BuildJob.State.PAUSED_OBSTRUCTION, "Door is only half built at " + at(first) + " - break the remaining half to resume"); return;
         }
         for (int i = 0; i < targets.size(); i++) {
-            Block target = targets.get(i);
-            if (!target.getType().isAir() && !clearable(target)) {
-                pause(job, BuildJob.State.PAUSED_OBSTRUCTION, "Blocked by " + target.getType().name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ')
-                    + " at " + at(target) + " - remove it to resume"); return;
-            }
+            String problem = obstruction(targets.get(i), expected.get(i));
+            if (problem != null) { pause(job, BuildJob.State.PAUSED_OBSTRUCTION, problem); return; }
         }
         Block chestBlock = world.getBlockAt(job.chestX(), job.chestY(), job.chestZ());
         if (!(chestBlock.getState() instanceof Chest chest)) { pause(job, BuildJob.State.PAUSED_OBSTRUCTION, "Builder's chest missing"); return; }
@@ -171,6 +184,9 @@ public final class BuildManager {
         if (!InventoryUtil.consume(chest.getBlockInventory(), Material.valueOf(step.material()), step.amount())) {
             pause(job, BuildJob.State.PAUSED_MATERIALS, "Missing " + step.amount() + " " + step.material() + " (plain items only)"); return;
         }
+        // Into water, blocks that can hold water go in waterlogged, as a hand-placed one would.
+        for (int i = 0; i < targets.size(); i++)
+            if (MaterialCost.isWater(targets.get(i).getType())) expected.set(i, MaterialCost.inWater(expected.get(i)));
         // Same main-thread step for both door halves. No neighbor physics or imported block entities.
         for (Block target : targets) clearPlant(target);
         for (int i = 0; i < targets.size(); i++) targets.get(i).setBlockData(expected.get(i), false);

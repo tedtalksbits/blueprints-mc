@@ -53,6 +53,56 @@ public final class MaterialCost {
 
     private MaterialCost() {}
 
+    /**
+     * Water and the plants that only grow in it. They are a build's surroundings, never part of it: captures and
+     * imports skip them like air, and a build places straight into them (so you can build a boat in the sea).
+     * Lava, kelp and sea pickles are not on this list; they still block a build.
+     */
+    private static final Set<Material> WATER = java.util.EnumSet.of(Material.WATER, Material.BUBBLE_COLUMN,
+        Material.SEAGRASS, Material.TALL_SEAGRASS);
+
+    public static boolean isWater(Material material) { return WATER.contains(material); }
+
+    /** Namespaced ids of {@link #isWater} blocks, for schematic palettes. */
+    public static boolean isWater(String id) {
+        String name = id.startsWith("minecraft:") ? id.substring("minecraft:".length()) : id;
+        Material m = Material.matchMaterial(name);
+        return m != null && isWater(m);
+    }
+
+    /**
+     * Whether a build may place this block into water. Solid blocks (stone, planks, doors...) push the water out;
+     * blocks that can hold water (slabs, stairs, fences, panes, trapdoors, signs...) go in waterlogged, exactly as when
+     * a player places them by hand (a sponge dries them). Refused: blocks water washes away (torches, flowers, dust),
+     * concrete powder (it would turn into concrete) and sponges (they would soak up the water around them).
+     * Checked for every supported block against real water by the paper-selftest.
+     */
+    public static boolean canPlaceInWater(BlockData data) {
+        Material m = data.getMaterial();
+        if (m == Material.SPONGE || m.name().endsWith("_CONCRETE_POWDER")) return false;
+        return data instanceof Waterlogged || m.isSolid();
+    }
+
+    /** The state a build places into water: waterlogged if the block can hold water, otherwise unchanged. */
+    public static BlockData inWater(BlockData data) {
+        if (!(data instanceof Waterlogged)) return data;
+        BlockData wet = data.clone();
+        ((Waterlogged) wet).setWaterlogged(true);
+        return wet;
+    }
+
+    /** True when two states are the same block, ignoring whether it holds water. */
+    public static boolean sameIgnoringWater(BlockData a, BlockData b) {
+        return dry(a).getAsString().equals(dry(b).getAsString());
+    }
+
+    private static BlockData dry(BlockData data) {
+        if (!(data instanceof Waterlogged w) || !w.isWaterlogged()) return data;
+        BlockData copy = data.clone();
+        ((Waterlogged) copy).setWaterlogged(false);
+        return copy;
+    }
+
     public static int amount(BlockData data) {
         String reason = unsupportedReason(data);
         if (reason != null) throw new IllegalArgumentException("Unsupported block (" + reason + "): " + data.getAsString());
