@@ -35,7 +35,9 @@ public final class SelfTestPlugin extends JavaPlugin {
     }
 
     private void finish() {
-        report.add(0, "SELFTEST " + (failures == 0 ? "PASSED" : "FAILED (" + failures + ")") + " on " + Bukkit.getVersion());
+        String verdict = "SELFTEST " + (failures == 0 ? "PASSED" : "FAILED (" + failures + ")") + " on " + Bukkit.getVersion();
+        report.add(0, verdict);   // first line for people reading the file
+        report.add(verdict);      // last line for ci/run-selftest.sh
         try {
             Files.createDirectories(getDataFolder().toPath());
             Files.write(getDataFolder().toPath().resolve("report.txt"), report);
