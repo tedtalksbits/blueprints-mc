@@ -227,7 +227,7 @@ public final class SelfTestPlugin extends JavaPlugin {
             if (!controlKept) { support.add(name); continue; }
             boolean kept = c.wet().getType() == c.data().getMaterial();
             // Compared with the control in air, so neighbour-driven state (a note block's instrument) doesn't count.
-            boolean same = kept && MaterialCost.sameIgnoringWater(c.wet().getBlockData(), c.dry().getBlockData());
+            boolean same = kept && MaterialCost.sameIgnoringWater(steady(c.wet().getBlockData()), steady(c.dry().getBlockData()));
             boolean rule = MaterialCost.canPlaceInWater(c.data());
             if (rule && same) dryOk++;
             else if (rule) lost.add(name + (kept ? " (changed to " + c.wet().getBlockData().getAsString() + ")" : " (washed away or turned into " + c.wet().getType().name().toLowerCase() + ")"));
@@ -256,6 +256,19 @@ public final class SelfTestPlugin extends JavaPlugin {
         Block side = lower.getRelative(1, 0, 0);
         side.setType(Material.AIR, false); side.setType(Material.WATER, true);
         doorLower = lower;
+    }
+
+    /**
+     * Redstone ore lights up for a moment when something touches it and goes dark again on its own; that is not the
+     * water changing the block. (It made one CI run of 2026-11-24 fail: lit=true in water, not in the dry control.)
+     */
+    private static BlockData steady(BlockData data) {
+        if (data instanceof org.bukkit.block.data.Lightable l && data.getMaterial().name().endsWith("REDSTONE_ORE") && l.isLit()) {
+            BlockData copy = data.clone();
+            ((org.bukkit.block.data.Lightable) copy).setLit(false);
+            return copy;
+        }
+        return data;
     }
 
     private void doorCheck() {
